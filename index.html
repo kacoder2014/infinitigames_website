@@ -438,6 +438,12 @@
     }
 
     /* ── Color themes per card ── */
+    /* orange (Clash of Clans) */
+    .theme-orange .card-banner { background: linear-gradient(135deg, #1a0a00, #3d1a00); }
+    .theme-orange .card-tag { background: rgba(234,88,12,.15); color: #fb923c; border: 1px solid rgba(234,88,12,.3); }
+    .theme-orange .card-launch { background: linear-gradient(135deg, #ea580c, #c2410c); color: #fff; box-shadow: 0 0 20px rgba(234,88,12,.45); }
+    .theme-orange:hover { box-shadow: 0 20px 60px rgba(234,88,12,.2); }
+
     /* purple */
     .theme-purple .card-banner { background: linear-gradient(135deg, #1e0a3c, #3b1d6e); }
     .theme-purple .card-tag { background: rgba(124,58,237,.15); color: #a78bfa; border: 1px solid rgba(124,58,237,.3); }
@@ -637,7 +643,7 @@
 
 <!-- HERO -->
 <div class="hero">
-  <div class="hero-badge"><span>🎮</span> Now Live – 6 Games & Chat</div>
+  <div class="hero-badge"><span>🎮</span> Now Live – 7 Games & Chat</div>
   <h1>Play. Chat.<br /><em>Dominate.</em></h1>
   <p class="hero-sub">Your all-in-one gaming hub. Jump into iconic games, connect with players worldwide, and climb the leaderboards — all in one place.</p>
   <div class="hero-btns">
@@ -649,7 +655,7 @@
 <!-- STATS -->
 <div class="stats">
   <div class="stat"><div class="stat-num">12K+</div><div class="stat-label">Active Players</div></div>
-  <div class="stat"><div class="stat-num">6</div><div class="stat-label">Games</div></div>
+  <div class="stat"><div class="stat-num">7</div><div class="stat-label">Games</div></div>
   <div class="stat"><div class="stat-num">24/7</div><div class="stat-label">Live Chat</div></div>
   <div class="stat"><div class="stat-num">99.9%</div><div class="stat-label">Uptime</div></div>
 </div>
@@ -665,8 +671,24 @@
 
   <div class="cards">
 
-    <!-- Featured: Snake -->
-    <a href="games/snake/index.html" class="card theme-green card-featured">
+    <!-- Featured: Clash of Clans -->
+    <a href="ClashOfClans.html" target="_blank" rel="noopener noreferrer" class="card theme-orange card-featured">
+      <div class="card-banner">
+        <div class="banner-icon">⚔️</div>
+      </div>
+      <div class="card-body">
+        <span class="card-tag">⭐ Featured</span>
+        <div class="card-title">Clash of Clans</div>
+        <p class="card-desc">Build your village, raise a clan, and clash with thousands of players worldwide. Train troops, forge alliances, and conquer enemy bases in epic battles.</p>
+        <div class="card-footer">
+          <div class="card-players"><div class="dot"></div> 8,412 playing</div>
+          <a href="ClashOfClans.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
+        </div>
+      </div>
+    </a>
+
+    <!-- Snake -->
+    <a href="games/snake/index.html" target="_blank" rel="noopener noreferrer" class="card theme-green">
       <div class="card-banner">
         <div class="banner-icon">🐍</div>
       </div>
@@ -676,13 +698,13 @@
         <p class="card-desc">The timeless classic reimagined with silky-smooth controls, power-ups, and a global leaderboard. How long can you grow?</p>
         <div class="card-footer">
           <div class="card-players"><div class="dot"></div> 3,241 playing</div>
-          <a href="games/snake/index.html" class="card-launch">▶ Launch</a>
+          <a href="games/snake/index.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
         </div>
       </div>
     </a>
 
     <!-- Tic Tac Toe -->
-    <a href="games/tictactoe/index.html" class="card theme-cyan">
+    <a href="games/tictactoe/index.html" target="_blank" rel="noopener noreferrer" class="card theme-cyan">
       <div class="card-banner">
         <div class="banner-icon">⭕</div>
       </div>
@@ -692,13 +714,13 @@
         <p class="card-desc">Classic X's and O's, now with online multiplayer. Challenge a friend or the AI.</p>
         <div class="card-footer">
           <div class="card-players"><div class="dot"></div> 814 playing</div>
-          <a href="games/tictactoe/index.html" class="card-launch">▶ Launch</a>
+          <a href="games/tictactoe/index.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
         </div>
       </div>
     </a>
 
     <!-- Chess -->
-    <a href="games/chess/index.html" class="card theme-amber">
+    <a href="games/chess/index.html" target="_blank" rel="noopener noreferrer" class="card theme-amber">
       <div class="card-banner">
         <div class="banner-icon">♟️</div>
       </div>
@@ -708,13 +730,13 @@
         <p class="card-desc">Full-featured chess with AI difficulty levels, move hints, and rated online matches.</p>
         <div class="card-footer">
           <div class="card-players"><div class="dot"></div> 2,109 playing</div>
-          <a href="games/chess/index.html" class="card-launch">▶ Launch</a>
+          <a href="games/chess/index.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
         </div>
       </div>
     </a>
 
     <!-- Flappy Bird -->
-    <a href="games/flappy/index.html" class="card theme-purple">
+    <a href="games/flappy/index.html" target="_blank" rel="noopener noreferrer" class="card theme-purple">
       <div class="card-banner">
         <div class="banner-icon">🐦</div>
       </div>
@@ -724,13 +746,13 @@
         <p class="card-desc">One tap, endless frustration. Dodge the pipes and beat your friends' high scores.</p>
         <div class="card-footer">
           <div class="card-players"><div class="dot"></div> 1,578 playing</div>
-          <a href="games/flappy/index.html" class="card-launch">▶ Launch</a>
+          <a href="games/flappy/index.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
         </div>
       </div>
     </a>
 
     <!-- Tetris -->
-    <a href="games/tetris/index.html" class="card theme-red">
+    <a href="games/tetris/index.html" target="_blank" rel="noopener noreferrer" class="card theme-red">
       <div class="card-banner">
         <div class="banner-icon">🟥</div>
       </div>
@@ -740,13 +762,13 @@
         <p class="card-desc">Stack, clear, survive. Classic falling-block action with ghost pieces and hold queue.</p>
         <div class="card-footer">
           <div class="card-players"><div class="dot"></div> 2,987 playing</div>
-          <a href="games/tetris/index.html" class="card-launch">▶ Launch</a>
+          <a href="games/tetris/index.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
         </div>
       </div>
     </a>
 
     <!-- Memory Match -->
-    <a href="games/memory/index.html" class="card theme-pink">
+    <a href="games/memory/index.html" target="_blank" rel="noopener noreferrer" class="card theme-pink">
       <div class="card-banner">
         <div class="banner-icon">🃏</div>
       </div>
@@ -756,7 +778,7 @@
         <p class="card-desc">Flip cards, find pairs, train your memory. Compete for the fastest clear time.</p>
         <div class="card-footer">
           <div class="card-players"><div class="dot"></div> 642 playing</div>
-          <a href="games/memory/index.html" class="card-launch">▶ Launch</a>
+          <a href="games/memory/index.html" target="_blank" rel="noopener noreferrer" class="card-launch">▶ Launch</a>
         </div>
       </div>
     </a>
@@ -807,7 +829,7 @@
         <div class="feat"><div class="feat-dot"></div> Emoji reactions & GIF support</div>
         <div class="feat"><div class="feat-dot"></div> In-game challenge invites</div>
       </div>
-      <a href="chat/index.html" class="btn-primary" style="width:fit-content;">Open Chat →</a>
+      <a href="chat/index.html" target="_blank" rel="noopener noreferrer" class="btn-primary" style="width:fit-content;">Open Chat →</a>
     </div>
   </div>
 </section>

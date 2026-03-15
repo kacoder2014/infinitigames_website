@@ -1,0 +1,2085 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clash Arena</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+
+    :root{
+      --gold:   #f59e0b;
+      --blue:   #3b82f6;
+      --purple: #8b5cf6;
+      --green:  #22c55e;
+      --red:    #ef4444;
+      --card-bg:#0b1220;
+      --border: rgba(255,255,255,.07);
+      --surface:#111827;
+    }
+
+    body{
+      margin:0;
+      font-family:'Inter', Arial, sans-serif;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(37,99,235,.22), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 80%,  rgba(124,58,237,.12), transparent),
+        linear-gradient(180deg, #080e1a 0%, #0f172a 100%);
+      color:white;
+      min-height:100vh;
+    }
+
+    @keyframes shimmer{
+      0%  { background-position: -200% center; }
+      100%{ background-position:  200% center; }
+    }
+    @keyframes pulse-glow{
+      0%,100%{ box-shadow:0 0 12px rgba(251,191,36,.35); }
+      50%    { box-shadow:0 0 28px rgba(251,191,36,.75); }
+    }
+    @keyframes timer-pulse{
+      0%,100%{ opacity:1; transform:scale(1); }
+      50%    { opacity:.7; transform:scale(1.06); }
+    }
+    @keyframes badge-pop{
+      0%  { transform:scale(0.8); opacity:0; }
+      100%{ transform:scale(1);   opacity:1; }
+    }
+
+    .screen{
+      display:none;
+      min-height:100vh;
+      width:100%;
+    }
+
+    .screen.active{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:24px;
+    }
+
+    .auth-wrap{
+      width:100%;
+      max-width:380px;
+    }
+
+    .auth-card{
+      background:rgba(17,24,39,.96);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:22px;
+      padding:28px 24px;
+      box-shadow:0 20px 60px rgba(0,0,0,.45);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand{
+      text-align:center;
+      margin-bottom:22px;
+    }
+
+    .brand .logo{
+      width:72px;
+      height:72px;
+      margin:0 auto 12px;
+      border-radius:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:34px;
+      background:linear-gradient(135deg,#2563eb,#7c3aed);
+      box-shadow:0 12px 30px rgba(37,99,235,.35);
+    }
+
+    .brand h1{
+      margin:0;
+      font-family:'Bangers', cursive;
+      font-size:38px;
+      font-weight:400;
+      letter-spacing:2px;
+      background:linear-gradient(135deg,#60a5fa,#a78bfa);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+
+    .brand p{
+      margin:8px 0 0;
+      color:#64748b;
+      font-size:13px;
+      letter-spacing:.3px;
+    }
+
+    .field{
+      margin-top:14px;
+      text-align:left;
+    }
+
+    .field label{
+      display:block;
+      margin-bottom:8px;
+      color:#cbd5e1;
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .field input{
+      width:100%;
+      padding:13px 16px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.09);
+      background:rgba(255,255,255,.04);
+      color:white;
+      outline:none;
+      font-size:15px;
+      font-family:inherit;
+      transition:.18s ease;
+    }
+
+    .field input::placeholder{ color:#4b5563; }
+
+    .field input:focus{
+      border-color:#3b82f6;
+      background:rgba(59,130,246,.06);
+      box-shadow:0 0 0 3px rgba(59,130,246,.15);
+    }
+
+    .primary-btn, .secondary-btn, .danger-btn{
+      width:100%;
+      border:none;
+      border-radius:14px;
+      padding:14px 16px;
+      font-size:15px;
+      font-weight:800;
+      font-family:inherit;
+      cursor:pointer;
+      transition:.18s cubic-bezier(.34,1.56,.64,1);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .primary-btn{
+      background:linear-gradient(135deg,#2563eb 0%,#4f46e5 50%,#7c3aed 100%);
+      background-size:200% auto;
+      color:white;
+      box-shadow:0 8px 24px rgba(79,70,229,.4);
+      letter-spacing:.4px;
+    }
+
+    .primary-btn:hover{
+      transform:translateY(-2px) scale(1.01);
+      background-position:right center;
+      box-shadow:0 14px 32px rgba(79,70,229,.55);
+    }
+    .primary-btn:active{ transform:translateY(0) scale(.98); }
+
+    .secondary-btn{
+      background:rgba(255,255,255,.05);
+      color:#cbd5e1;
+      border:1px solid rgba(255,255,255,.1);
+    }
+    .secondary-btn:hover{ background:rgba(255,255,255,.09); transform:translateY(-1px); }
+
+    .danger-btn{
+      background:linear-gradient(135deg,#7f1d1d,#991b1b);
+      color:white;
+    }
+    .danger-btn:hover{ transform:translateY(-1px); }
+
+    .stack{
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+      margin-top:18px;
+    }
+
+    .switch-text{
+      margin-top:16px;
+      text-align:center;
+      color:#94a3b8;
+      font-size:14px;
+    }
+
+    .switch-text span{
+      color:#60a5fa;
+      font-weight:800;
+      cursor:pointer;
+    }
+
+    .tiny-note{
+      margin-top:14px;
+      text-align:center;
+      color:#64748b;
+      font-size:12px;
+    }
+
+    .app-screen{
+      width:100%;
+      max-width:1180px;
+      margin:0 auto;
+      padding:24px 18px 30px;
+    }
+
+    .app-shell{
+      background:rgba(17,24,39,.94);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:28px;
+      box-shadow:0 22px 60px rgba(0,0,0,.45);
+      overflow:hidden;
+    }
+
+    .home-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+      padding:22px 26px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+      background:
+        radial-gradient(ellipse 60% 100% at 100% 0%, rgba(124,58,237,.25), transparent 55%),
+        radial-gradient(ellipse 40% 80% at 0% 100%, rgba(37,99,235,.18), transparent 55%),
+        linear-gradient(180deg, #0f172a 0%, #0b1220 100%);
+    }
+
+    .home-title h2{
+      margin:0;
+      font-family:'Bangers', cursive;
+      font-size:32px;
+      font-weight:400;
+      letter-spacing:1.5px;
+      background:linear-gradient(90deg,#f8fafc,#94a3b8);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+
+    .home-title p{
+      margin:5px 0 0;
+      color:#475569;
+      font-size:13px;
+    }
+
+    .header-actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .small-btn{
+      border:none;
+      border-radius:12px;
+      padding:11px 16px;
+      font-weight:800;
+      font-family:inherit;
+      font-size:13px;
+      cursor:pointer;
+      background:rgba(255,255,255,.06);
+      color:#e2e8f0;
+      border:1px solid rgba(255,255,255,.1);
+      transition:.18s cubic-bezier(.34,1.56,.64,1);
+      letter-spacing:.3px;
+      white-space:nowrap;
+    }
+    .small-btn:hover{ transform:translateY(-2px); }
+    .small-btn:active{ transform:translateY(0) scale(.97); }
+
+    .small-btn.play{
+      background:linear-gradient(135deg,#16a34a,#15803d);
+      border-color:rgba(34,197,94,.3);
+      box-shadow:0 6px 20px rgba(22,163,74,.4);
+      animation:pulse-glow 2.5s ease-in-out infinite;
+    }
+
+    .small-btn.pack{
+      background:linear-gradient(135deg,#7c3aed,#4f46e5);
+      border-color:rgba(124,58,237,.3);
+      box-shadow:0 6px 20px rgba(124,58,237,.35);
+    }
+
+    .small-btn.upgrade{
+      background:linear-gradient(135deg,#d97706,#f59e0b);
+      border-color:rgba(245,158,11,.3);
+      box-shadow:0 6px 20px rgba(217,119,6,.35);
+    }
+
+    .small-btn.logout{
+      background:rgba(153,27,27,.7);
+      border-color:rgba(239,68,68,.2);
+    }
+
+    .home-grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:18px;
+      padding:20px;
+    }
+
+    .panel{
+      background:rgba(11,18,32,.85);
+      border:1px solid var(--border);
+      border-radius:24px;
+      padding:20px;
+      backdrop-filter:blur(6px);
+    }
+
+    .panel h3{
+      margin:0 0 16px;
+      font-family:'Bangers', cursive;
+      font-size:22px;
+      font-weight:400;
+      letter-spacing:1.2px;
+      color:#94a3b8;
+      text-transform:uppercase;
+    }
+
+    .stats-grid{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:10px;
+    }
+
+    .stat-card{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:14px 16px;
+      position:relative;
+      overflow:hidden;
+      transition:.2s ease;
+    }
+    .stat-card:hover{ border-color:rgba(255,255,255,.14); transform:translateY(-1px); }
+
+    .stat-card::before{
+      content:'';
+      position:absolute;
+      top:0; left:0;
+      width:3px; height:100%;
+      border-radius:999px;
+    }
+    .stat-card.gold::before  { background:linear-gradient(180deg,#f59e0b,#d97706); }
+    .stat-card.level::before { background:linear-gradient(180deg,#3b82f6,#1d4ed8); }
+    .stat-card.atk::before   { background:linear-gradient(180deg,#ef4444,#b91c1c); }
+    .stat-card.cards::before { background:linear-gradient(180deg,#8b5cf6,#6d28d9); }
+
+    .stat-icon{
+      font-size:18px;
+      margin-bottom:6px;
+      display:block;
+    }
+
+    .stat-label{
+      color:#475569;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.6px;
+      text-transform:uppercase;
+    }
+
+    .stat-value{
+      margin-top:4px;
+      font-family:'Bangers', cursive;
+      font-size:36px;
+      font-weight:400;
+      letter-spacing:1px;
+      line-height:1;
+    }
+    .stat-card.gold  .stat-value{ color:#f59e0b; }
+    .stat-card.level .stat-value{ color:#60a5fa; }
+    .stat-card.atk   .stat-value{ color:#f87171; }
+    .stat-card.cards .stat-value{ color:#a78bfa; }
+
+    .sub-value{
+      margin-top:5px;
+      color:#374151;
+      font-size:12px;
+      line-height:1.3;
+    }
+
+    .reward-strip{
+      margin-top:14px;
+      padding:13px 16px;
+      border-radius:16px;
+      background:linear-gradient(135deg, rgba(37,99,235,.12), rgba(124,58,237,.12));
+      border:1px solid rgba(99,102,241,.2);
+      color:#818cf8;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .cards-grid{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:12px;
+    }
+
+    .card-item{
+      background:linear-gradient(160deg,rgba(255,255,255,.04),rgba(255,255,255,.01));
+      border:1px solid var(--border);
+      border-radius:20px;
+      padding:14px;
+      position:relative;
+      min-height:130px;
+      transition:.2s ease;
+      overflow:hidden;
+    }
+    .card-item:hover{ border-color:rgba(255,255,255,.15); transform:translateY(-2px); }
+
+    .card-item::after{
+      content:'';
+      position:absolute;
+      inset:0;
+      border-radius:20px;
+      background:linear-gradient(135deg,rgba(255,255,255,.04),transparent 60%);
+      pointer-events:none;
+    }
+
+    .card-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:8px;
+    }
+
+    .card-emoji{
+      width:52px;
+      height:52px;
+      border-radius:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:26px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.1);
+      flex-shrink:0;
+    }
+
+    .rarity-badge{
+      padding:5px 9px;
+      border-radius:999px;
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      white-space:nowrap;
+      animation:badge-pop .3s ease both;
+    }
+
+    .rarity-common   { background:rgba(148,163,184,.15); color:#94a3b8; border:1px solid rgba(148,163,184,.2); }
+    .rarity-rare     { background:rgba(59,130,246,.15);  color:#60a5fa; border:1px solid rgba(59,130,246,.25); }
+    .rarity-epic     { background:rgba(168,85,247,.15);  color:#c084fc; border:1px solid rgba(168,85,247,.25); }
+    .rarity-legendary{ background:rgba(245,158,11,.15);  color:#fbbf24; border:1px solid rgba(245,158,11,.25); }
+
+    .card-name{
+      margin-top:10px;
+      font-family:'Bangers', cursive;
+      font-size:20px;
+      font-weight:400;
+      letter-spacing:.8px;
+    }
+
+    .card-meta{
+      margin-top:4px;
+      color:#475569;
+      font-size:12px;
+    }
+
+    .card-power{
+      margin-top:8px;
+      color:#64748b;
+      font-size:12px;
+    }
+
+    .action-grid{
+      display:grid;
+      gap:10px;
+    }
+
+    .action-card{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:16px;
+      transition:.2s ease;
+    }
+    .action-card:hover{ border-color:rgba(255,255,255,.12); }
+
+    .action-card h4{
+      margin:0 0 7px;
+      font-family:'Bangers', cursive;
+      font-size:19px;
+      font-weight:400;
+      letter-spacing:1px;
+    }
+
+    .action-card p{
+      margin:0 0 12px;
+      color:#475569;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .inline-info{
+      color:#64748b;
+      font-size:12px;
+      margin-bottom:10px;
+    }
+
+    .inline-info strong{ color:#94a3b8; }
+
+    .battle-shell{
+      width:100%;
+      max-width:520px;
+      margin:0 auto;
+      padding:18px 14px 30px;
+    }
+
+    .battle-wrap{
+      background:rgba(17,24,39,.95);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:28px;
+      overflow:hidden;
+      box-shadow:0 22px 60px rgba(0,0,0,.48);
+    }
+
+    #topbar{
+      background:linear-gradient(180deg,#080e1a,#0b1220);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding:12px 18px;
+      border-bottom:1px solid rgba(255,255,255,.07);
+      gap:8px;
+    }
+
+    .topbar-player{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:80px;
+    }
+
+    .topbar-player.right{ text-align:right; }
+
+    .battle-name{
+      color:#475569;
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+    }
+
+    .crown-row{
+      display:flex;
+      align-items:center;
+      gap:5px;
+      font-family:'Bangers', cursive;
+      font-size:22px;
+      letter-spacing:.5px;
+    }
+    .topbar-player.right .crown-row{ justify-content:flex-end; }
+
+    .crown-icon{
+      width:18px;
+      height:18px;
+      display:inline-block;
+    }
+
+    .topbar-center{
+      text-align:center;
+      flex:1;
+    }
+
+    #timer{
+      font-family:'Bangers', cursive;
+      font-size:34px;
+      letter-spacing:3px;
+      color:#e2e8f0;
+      line-height:1;
+      transition:color .3s;
+    }
+
+    #timer.low{
+      color:#ef4444;
+      animation:timer-pulse .6s ease-in-out infinite;
+    }
+
+    .timer-label{
+      font-size:10px;
+      font-weight:700;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#374151;
+      margin-top:2px;
+    }
+
+    #arena{
+      width:100%;
+      max-width:420px;
+      height:640px;
+      margin:16px auto 12px;
+      background:linear-gradient(180deg,#5eead4 0%, #22c55e 22%, #4ade80 50%, #22c55e 78%, #5eead4 100%);
+      border:4px solid rgba(255,255,255,.95);
+      position:relative;
+      overflow:hidden;
+      border-radius:22px;
+      box-shadow: inset 0 0 0 4px rgba(0,0,0,.08);
+    }
+
+    .river{
+      position:absolute;
+      top:50%;
+      left:0;
+      width:100%;
+      height:18px;
+      transform:translateY(-50%);
+      background:linear-gradient(180deg,#38bdf8,#0ea5e9);
+      box-shadow:0 0 20px rgba(56,189,248,.35);
+    }
+
+    .bridge{
+      position:absolute;
+      width:70px;
+      height:18px;
+      background:#cbd5e1;
+      top:50%;
+      transform:translateY(-50%);
+      border-radius:6px;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.08);
+    }
+
+    .bridge.left{ left:78px; }
+    .bridge.right{ right:78px; }
+
+    .lane-divider{
+      position:absolute;
+      top:0;
+      bottom:0;
+      width:2px;
+      left:50%;
+      transform:translateX(-50%);
+      background:rgba(255,255,255,.14);
+      pointer-events:none;
+    }
+
+    .tower{
+      width:60px;
+      height:60px;
+      border-radius:14px;
+      position:absolute;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:24px;
+      font-weight:900;
+      box-shadow:0 10px 22px rgba(0,0,0,.2);
+    }
+
+    .playerTower{
+      background:linear-gradient(180deg,#3b82f6,#1d4ed8);
+      border:2px solid rgba(255,255,255,.18);
+    }
+
+    .enemyTower{
+      background:linear-gradient(180deg,#ef4444,#b91c1c);
+      border:2px solid rgba(255,255,255,.18);
+    }
+
+    .tower-health{
+      position:absolute;
+      top:-10px;
+      left:50%;
+      transform:translateX(-50%);
+      width:64px;
+      height:8px;
+      background:rgba(0,0,0,.35);
+      border-radius:999px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.1);
+    }
+
+    .tower-health-fill{
+      height:100%;
+      width:100%;
+      background:linear-gradient(90deg,#22c55e,#84cc16);
+    }
+
+    .unit{
+      width:44px;
+      height:44px;
+      position:absolute;
+      user-select:none;
+      overflow:visible;
+    }
+
+    .player{ /* player units - glow handled via drop-shadow on sprite */ }
+    .enemy{ /* enemy units - glow handled via drop-shadow on sprite */ }
+
+    .unit-sprite{
+      width:44px;
+      height:44px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:absolute;
+      top:0;
+      left:0;
+    }
+
+    .unit-sprite svg{
+      width:100%;
+      height:100%;
+      filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55));
+    }
+
+    .unit.player .unit-sprite svg{
+      filter:drop-shadow(0 0 6px rgba(250,204,21,0.7)) drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    }
+
+    .unit.enemy .unit-sprite svg{
+      filter:drop-shadow(0 0 6px rgba(239,68,68,0.7)) drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+      transform:scaleX(-1);
+    }
+
+    @keyframes unit-walk{
+      0%,100%{ transform:translateY(0)   rotate(-3deg); }
+      25%    { transform:translateY(-4px) rotate(0deg);  }
+      50%    { transform:translateY(-2px) rotate(3deg);  }
+      75%    { transform:translateY(-5px) rotate(0deg);  }
+    }
+
+    @keyframes unit-attack{
+      0%  { transform:scale(1)    rotate(0);     }
+      25% { transform:scale(1.35) rotate(-8deg); filter:drop-shadow(0 0 14px rgba(255,210,0,1)); }
+      55% { transform:scale(0.9)  rotate(4deg);  }
+      100%{ transform:scale(1)    rotate(0);     }
+    }
+
+    @keyframes unit-die{
+      0%  { transform:scale(1)    rotate(0);      opacity:1; }
+      30% { transform:scale(1.2)  rotate(20deg);  opacity:0.8; }
+      100%{ transform:scale(0.05) rotate(-200deg);opacity:0; }
+    }
+
+    @keyframes unit-spawn{
+      0%  { transform:scale(0)    translateY(8px); opacity:0; }
+      65% { transform:scale(1.18) translateY(-2px);opacity:1; }
+      100%{ transform:scale(1)    translateY(0);   opacity:1; }
+    }
+
+    .unit-sprite{ animation:unit-spawn 0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
+    .unit.is-walking .unit-sprite{ animation:unit-walk 0.46s ease-in-out infinite; }
+    .unit.is-attacking .unit-sprite{ animation:unit-attack 0.38s ease-out forwards; }
+    .unit.is-dying .unit-sprite{ animation:unit-die 0.52s ease-in forwards; }
+
+    .unit-health{
+      position:absolute;
+      top:-9px;
+      left:50%;
+      transform:translateX(-50%);
+      width:38px;
+      height:5px;
+      border-radius:999px;
+      background:rgba(0,0,0,.35);
+      overflow:hidden;
+    }
+
+    .unit-health-fill{
+      height:100%;
+      width:100%;
+      background:#22c55e;
+    }
+
+    .explosion{
+      position:absolute;
+      width:74px;
+      height:74px;
+      border-radius:50%;
+      background:radial-gradient(circle,#fde68a 0%,#fb923c 38%,#ef4444 70%,transparent 72%);
+      transform:translate(-50%,-50%) scale(.7);
+      animation:boom .38s ease-out forwards;
+      pointer-events:none;
+    }
+
+    @keyframes boom{
+      from{opacity:1; transform:translate(-50%,-50%) scale(.5);}
+      to{opacity:0; transform:translate(-50%,-50%) scale(1.3);}
+    }
+
+    #cardbar{
+      width:100%;
+      max-width:420px;
+      margin:0 auto;
+      background:linear-gradient(180deg,#080e1a,#0b1220);
+      display:flex;
+      justify-content:space-between;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:18px 18px 0 0;
+      border-top:1px solid rgba(255,255,255,.06);
+    }
+
+    .card{
+      width:calc(25% - 6px);
+      min-height:76px;
+      background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));
+      border-radius:16px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      font-size:18px;
+      cursor:grab;
+      border:1px solid rgba(255,255,255,.08);
+      position:relative;
+      transition:.15s ease;
+      padding:8px 4px;
+    }
+
+    .card:hover{
+      transform:translateY(-3px) scale(1.04);
+      border-color:rgba(139,92,246,.6);
+      box-shadow:0 8px 24px rgba(139,92,246,.25);
+    }
+
+    .card.cant-afford{
+      opacity:.45;
+      filter:saturate(.3);
+      cursor:not-allowed;
+    }
+
+    .card.can-afford{
+      border-color:rgba(139,92,246,.45);
+      box-shadow:0 0 14px rgba(139,92,246,.2);
+    }
+
+    .card-name-small{
+      font-size:10px;
+      font-weight:800;
+      color:#94a3b8;
+      text-align:center;
+      line-height:1.1;
+      letter-spacing:.3px;
+    }
+
+    .card-cost{
+      position:absolute;
+      top:5px;
+      right:5px;
+      width:20px;
+      height:20px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:11px;
+      font-weight:900;
+      color:white;
+      background:linear-gradient(135deg,#6d28d9,#7c3aed);
+      border:1.5px solid rgba(167,139,250,.4);
+      box-shadow:0 2px 8px rgba(109,40,217,.5);
+    }
+
+    #elixirContainer{
+      width:100%;
+      max-width:420px;
+      margin:0 auto 16px;
+      background:linear-gradient(180deg,#0b1220,#080e1a);
+      padding:8px 14px 14px;
+      border-radius:0 0 18px 18px;
+      border-top:1px solid rgba(255,255,255,.04);
+    }
+
+    .elixir-top{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:8px;
+      font-size:12px;
+      color:#6d28d9;
+      font-weight:900;
+      letter-spacing:.8px;
+      text-transform:uppercase;
+    }
+
+    #elixirCount{
+      font-family:'Bangers', cursive;
+      font-size:18px;
+      color:#a855f7;
+      letter-spacing:1px;
+    }
+
+    .elixir-pips{
+      display:flex;
+      gap:4px;
+      align-items:center;
+    }
+
+    .elixir-pip{
+      flex:1;
+      height:16px;
+      border-radius:5px;
+      background:rgba(109,40,217,.2);
+      border:1px solid rgba(109,40,217,.25);
+      transition:background .15s ease, box-shadow .15s ease;
+    }
+
+    .elixir-pip.filled{
+      background:linear-gradient(180deg,#c084fc,#8b5cf6);
+      border-color:rgba(192,132,252,.4);
+      box-shadow:0 0 8px rgba(139,92,246,.5);
+    }
+
+    .battle-footer{
+      width:100%;
+      max-width:420px;
+      margin:0 auto 16px;
+      display:flex;
+      gap:10px;
+      justify-content:space-between;
+    }
+
+    .battle-footer .small-btn{
+      flex:1;
+    }
+
+    .status-text{
+      text-align:center;
+      color:#475569;
+      font-size:12px;
+      font-weight:600;
+      letter-spacing:.3px;
+      margin:6px 0 8px;
+      min-height:16px;
+      text-transform:uppercase;
+    }
+
+    @media (max-width: 980px){
+      .home-grid{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 520px){
+      .auth-card{
+        padding:24px 18px;
+      }
+
+      .home-header{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+
+      .header-actions{
+        width:100%;
+      }
+
+      .header-actions .small-btn{
+        flex:1;
+      }
+
+      .cards-grid{
+        grid-template-columns:1fr;
+      }
+
+      #arena{
+        height:560px;
+      }
+
+      .card{
+        min-height:68px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" class="screen active">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="brand">
+          <div class="logo">⚔️</div>
+          <h1>Clash Arena</h1>
+          <p>Sign in to continue your battle journey</p>
+        </div>
+
+        <div class="field">
+          <label>Username</label>
+          <input id="loginUser" type="text" placeholder="Enter username" />
+        </div>
+
+        <div class="field">
+          <label>Password</label>
+          <input id="loginPass" type="password" placeholder="Enter password" />
+        </div>
+
+        <div class="stack">
+          <button class="primary-btn" onclick="login()">Login</button>
+        </div>
+
+        <div class="switch-text">
+          Don’t have an account? <span onclick="showScreen('signupScreen')">Create account</span>
+        </div>
+
+        <div class="tiny-note">Accounts are saved in this browser only.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNUP SCREEN -->
+  <div id="signupScreen" class="screen">
+    <div class="auth-wrap">
+      <div class="auth-card">
+        <div class="brand">
+          <div class="logo">🛡️</div>
+          <h1>Create Account</h1>
+          <p>Build your army and start unlocking cards</p>
+        </div>
+
+        <div class="field">
+          <label>Username</label>
+          <input id="signupUser" type="text" placeholder="Choose username" />
+        </div>
+
+        <div class="field">
+          <label>Password</label>
+          <input id="signupPass" type="password" placeholder="Choose password" />
+        </div>
+
+        <div class="stack">
+          <button class="primary-btn" onclick="signup()">Create Account</button>
+          <button class="secondary-btn" onclick="showScreen('loginScreen')">Back to Login</button>
+        </div>
+
+        <div class="tiny-note">Starter deck: Goblin + Wizard</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOME SCREEN -->
+  <div id="homeScreen" class="screen">
+    <div class="app-screen">
+      <div class="app-shell">
+        <div class="home-header">
+          <div class="home-title">
+            <h2 id="welcomeText">Welcome</h2>
+            <p>Manage your gold, open packs, upgrade power, and begin the next battle.</p>
+          </div>
+          <div class="header-actions">
+            <button class="small-btn pack" onclick="buyCardPack()">🎁 Buy Pack</button>
+            <button class="small-btn upgrade" onclick="upgradeArmy()">⬆ Upgrade Army</button>
+            <button class="small-btn play" onclick="startBattle()">⚔ Start Battle</button>
+            <button class="small-btn logout" onclick="logout()">⎋ Logout</button>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <div class="panel">
+            <h3>Your Profile</h3>
+            <div class="stats-grid">
+              <div class="stat-card gold">
+                <span class="stat-icon">💰</span>
+                <div class="stat-label">Gold</div>
+                <div class="stat-value" id="goldValue">0</div>
+                <div class="sub-value">Buy packs &amp; upgrades</div>
+              </div>
+              <div class="stat-card level">
+                <span class="stat-icon">⭐</span>
+                <div class="stat-label">Level</div>
+                <div class="stat-value" id="levelValue">1</div>
+                <div class="sub-value">Harder enemies, more rewards</div>
+              </div>
+              <div class="stat-card atk">
+                <span class="stat-icon">⚔️</span>
+                <div class="stat-label">Attack Bonus</div>
+                <div class="stat-value" id="attackValue">0</div>
+                <div class="sub-value">Boosts troop damage</div>
+              </div>
+              <div class="stat-card cards">
+                <span class="stat-icon">🃏</span>
+                <div class="stat-label">Cards</div>
+                <div class="stat-value" id="cardCountValue">0</div>
+                <div class="sub-value">Starter + pack unlocks</div>
+              </div>
+            </div>
+
+            <div class="reward-strip" id="rewardInfo">
+              Win a battle to earn gold and level up. Rarer cards unlock stronger decks.
+            </div>
+          </div>
+
+          <div class="panel">
+            <h3>Actions</h3>
+            <div class="action-grid">
+              <div class="action-card">
+                <h4>🎁 Buy Card Pack</h4>
+                <p>Spend 120 gold to unlock a new card if you do not own it yet. Duplicate cards give you a gold refund.</p>
+                <div class="inline-info">Pack cost: <strong>120 gold</strong></div>
+                <button class="primary-btn" onclick="buyCardPack()">Open Pack</button>
+              </div>
+
+              <div class="action-card">
+                <h4>⬆ Upgrade Army</h4>
+                <p>Increase your overall attack bonus. Stronger attack helps your cards hit harder in battle.</p>
+                <div class="inline-info">Upgrade cost: <strong>150 gold</strong></div>
+                <button class="secondary-btn" onclick="upgradeArmy()">Upgrade Attack</button>
+              </div>
+
+              <div class="action-card">
+                <h4>⚔ Start Battle</h4>
+                <p>Enter the arena with your available cards. Elixir, drag-and-drop cards, towers, fireball, and troops remain in the battle.</p>
+                <button class="primary-btn" onclick="startBattle()">Go To Battle</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:0 20px 20px;">
+          <div class="panel">
+            <h3>Your Cards</h3>
+            <div id="cardsGrid" class="cards-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTLE SCREEN -->
+  <div id="battleScreen" class="screen">
+    <div class="battle-shell">
+      <div class="battle-wrap">
+        <div id="topbar">
+          <div class="topbar-player">
+            <div class="battle-name">Enemy</div>
+            <div class="crown-row">
+              <svg class="crown-icon" viewBox="0 0 24 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 18L5 8L9 13L12 4L15 13L19 8L22 18H2Z" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/></svg>
+              <span id="enemyCrowns">0</span>
+            </div>
+          </div>
+          <div class="topbar-center">
+            <div id="timer">3:00</div>
+            <div class="timer-label">Arena Battle</div>
+          </div>
+          <div class="topbar-player right">
+            <div class="battle-name" id="battleUserName">You</div>
+            <div class="crown-row">
+              <span id="playerCrowns">0</span>
+              <svg class="crown-icon" viewBox="0 0 24 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 18L5 8L9 13L12 4L15 13L19 8L22 18H2Z" fill="#facc15" stroke="#fde68a" stroke-width="1"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div id="arena">
+          <div class="river"></div>
+          <div class="bridge left"></div>
+          <div class="bridge right"></div>
+          <div class="lane-divider"></div>
+
+          <div id="enemyKing" class="tower enemyTower" style="top:22px;left:180px;">👑
+            <div class="tower-health"><div id="enemyKingHealth" class="tower-health-fill"></div></div>
+          </div>
+          <div id="enemyLeft" class="tower enemyTower" style="top:120px;left:60px;">🏰
+            <div class="tower-health"><div id="enemyLeftHealth" class="tower-health-fill"></div></div>
+          </div>
+          <div id="enemyRight" class="tower enemyTower" style="top:120px;right:60px;">🏰
+            <div class="tower-health"><div id="enemyRightHealth" class="tower-health-fill"></div></div>
+          </div>
+
+          <div id="playerKing" class="tower playerTower" style="bottom:22px;left:180px;">👑
+            <div class="tower-health"><div id="playerKingHealth" class="tower-health-fill"></div></div>
+          </div>
+          <div id="playerLeft" class="tower playerTower" style="bottom:120px;left:60px;">🏰
+            <div class="tower-health"><div id="playerLeftHealth" class="tower-health-fill"></div></div>
+          </div>
+          <div id="playerRight" class="tower playerTower" style="bottom:120px;right:60px;">🏰
+            <div class="tower-health"><div id="playerRightHealth" class="tower-health-fill"></div></div>
+          </div>
+        </div>
+
+        <div class="status-text" id="battleStatus">Drag a card into your side of the arena to deploy it.</div>
+
+        <div id="cardbar"></div>
+
+        <div id="elixirContainer">
+          <div class="elixir-top">
+            <span>⚗ Elixir</span>
+            <span id="elixirCount">5</span>
+          </div>
+          <div class="elixir-pips" id="elixirPips">
+            <div class="elixir-pip" data-pip="1"></div>
+            <div class="elixir-pip" data-pip="2"></div>
+            <div class="elixir-pip" data-pip="3"></div>
+            <div class="elixir-pip" data-pip="4"></div>
+            <div class="elixir-pip" data-pip="5"></div>
+            <div class="elixir-pip" data-pip="6"></div>
+            <div class="elixir-pip" data-pip="7"></div>
+            <div class="elixir-pip" data-pip="8"></div>
+            <div class="elixir-pip" data-pip="9"></div>
+            <div class="elixir-pip" data-pip="10"></div>
+          </div>
+        </div>
+
+        <div class="battle-footer">
+          <button class="small-btn" onclick="backToHomeFromBattle()">⬅ Home</button>
+          <button class="small-btn pack" onclick="buyCardPackFromBattle()">🎁 Buy Pack</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SPRITES = {
+      goblin: `<svg viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="6,10 3,2 10,8"  fill="#16a34a"/>
+        <polygon points="22,10 25,2 18,8" fill="#16a34a"/>
+        <ellipse cx="14" cy="12" rx="9" ry="8" fill="#22c55e"/>
+        <circle cx="10" cy="10" r="2.5" fill="#fef08a"/>
+        <circle cx="18" cy="10" r="2.5" fill="#fef08a"/>
+        <circle cx="10.6" cy="10.3" r="1.2" fill="#111"/>
+        <circle cx="18.6" cy="10.3" r="1.2" fill="#111"/>
+        <ellipse cx="14" cy="14" rx="2" ry="1.2" fill="#16a34a"/>
+        <rect x="11" y="16.5" width="6" height="2" rx="1" fill="#14532d"/>
+        <rect x="11.5" y="16" width="1.5" height="3" rx="0.5" fill="white"/>
+        <rect x="15" y="16" width="1.5" height="3" rx="0.5" fill="white"/>
+        <rect x="8" y="20" width="12" height="10" rx="3" fill="#16a34a"/>
+        <rect x="8" y="24" width="12" height="2.5" rx="1" fill="#713f12"/>
+        <circle cx="14" cy="25.2" r="1.5" fill="#ca8a04"/>
+        <rect x="3" y="20" width="5" height="3" rx="2" fill="#16a34a"/>
+        <rect x="20" y="20" width="5" height="3" rx="2" fill="#16a34a"/>
+        <polygon points="3,23 1,26 3.5,25" fill="#065f46"/>
+        <polygon points="5.5,23 4,26 6.5,25" fill="#065f46"/>
+        <polygon points="22,23 20.5,26 23,25" fill="#065f46"/>
+        <polygon points="24.5,23 23,26 25.5,25" fill="#065f46"/>
+        <rect x="9"  y="29" width="4" height="5" rx="2" fill="#15803d"/>
+        <rect x="15" y="29" width="4" height="5" rx="2" fill="#15803d"/>
+      </svg>`,
+
+      wizard: `<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="14,0 8,11 20,11" fill="#6d28d9"/>
+        <rect x="7" y="10" width="14" height="3" rx="1.5" fill="#7c3aed"/>
+        <circle cx="14" cy="18" r="6.5" fill="#fde68a"/>
+        <circle cx="11.5" cy="16.5" r="1.5" fill="#1f2937"/>
+        <circle cx="16.5" cy="16.5" r="1.5" fill="#1f2937"/>
+        <circle cx="12" cy="16.5" r="0.6" fill="white"/>
+        <circle cx="17" cy="16.5" r="0.6" fill="white"/>
+        <path d="M11.5,20.5 Q14,22.5 16.5,20.5" fill="none" stroke="#92400e" stroke-width="1.2" stroke-linecap="round"/>
+        <ellipse cx="14" cy="23" rx="5" ry="3" fill="white"/>
+        <rect x="6" y="24" width="16" height="10" rx="3" fill="#6d28d9"/>
+        <circle cx="10" cy="29" r="1" fill="#c4b5fd"/>
+        <circle cx="14" cy="31" r="1" fill="#c4b5fd"/>
+        <circle cx="18" cy="28.5" r="1" fill="#c4b5fd"/>
+        <rect x="20" y="14" width="3" height="16" rx="1.5" fill="#92400e"/>
+        <circle cx="21.5" cy="13" r="4.5" fill="#a855f7"/>
+        <circle cx="20.5" cy="12" r="2" fill="#e9d5ff" opacity="0.9"/>
+        <rect x="9" y="33" width="4" height="3" rx="2" fill="#5b21b6"/>
+        <rect x="15" y="33" width="4" height="3" rx="2" fill="#5b21b6"/>
+      </svg>`,
+
+      dragon: `<svg viewBox="0 0 38 30" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="0,4 12,18 16,9"  fill="#b91c1c" opacity="0.85"/>
+        <polygon points="38,4 26,18 22,9" fill="#b91c1c" opacity="0.85"/>
+        <polygon points="3,4 13,16 15,9"  fill="#fca5a5" opacity="0.35"/>
+        <ellipse cx="19" cy="20" rx="11" ry="8" fill="#dc2626"/>
+        <ellipse cx="16" cy="12" rx="7" ry="9" fill="#ef4444"/>
+        <ellipse cx="21" cy="10" rx="8" ry="6" fill="#ef4444"/>
+        <ellipse cx="26" cy="12" rx="5" ry="3.5" fill="#fca5a5"/>
+        <circle cx="26.5" cy="11" r="1.2" fill="#7f1d1d"/>
+        <circle cx="19" cy="8" r="3" fill="#fef08a"/>
+        <circle cx="19.5" cy="8" r="1.4" fill="#111"/>
+        <ellipse cx="31" cy="13" rx="5" ry="2" fill="#fb923c" opacity="0.9"/>
+        <ellipse cx="35" cy="12" rx="3" ry="1.3" fill="#fef08a" opacity="0.8"/>
+        <polygon points="16,11 18,5 20,11" fill="#991b1b"/>
+        <polygon points="13,15 15,9  17,15" fill="#991b1b"/>
+        <path d="M30,23 Q34,27 32,30" stroke="#991b1b" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <rect x="11" y="25" width="6" height="5" rx="2.5" fill="#b91c1c"/>
+        <rect x="21" y="25" width="6" height="5" rx="2.5" fill="#b91c1c"/>
+      </svg>`,
+
+      knight: `<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8"  y="2" width="12" height="14" rx="5" fill="#9ca3af"/>
+        <rect x="10" y="9" width="8"  height="4"  rx="1" fill="#374151"/>
+        <rect x="11" y="10" width="6" height="1.5" rx="0.5" fill="#6b7280"/>
+        <rect x="6"  y="16" width="16" height="13" rx="3" fill="#6b7280"/>
+        <rect x="6"  y="20" width="16" height="1.5" fill="#4b5563"/>
+        <rect x="6"  y="24" width="16" height="1.5" fill="#4b5563"/>
+        <rect x="1"  y="16" width="8"  height="11" rx="3" fill="#1d4ed8"/>
+        <polygon points="5,18 5,25 1,21.5" fill="#1e40af"/>
+        <rect x="4" y="18" width="2" height="7"  rx="1" fill="white" opacity="0.75"/>
+        <rect x="2" y="20.5" width="6" height="2" rx="1" fill="white" opacity="0.75"/>
+        <rect x="21" y="9"  width="2.5" height="18" rx="1.2" fill="#d1d5db"/>
+        <rect x="19" y="15" width="7"  height="2.5" rx="1"   fill="#9ca3af"/>
+        <rect x="21" y="25" width="2.5" height="3" rx="1"   fill="#92400e"/>
+        <rect x="8"  y="28" width="5"  height="8" rx="2.5" fill="#4b5563"/>
+        <rect x="15" y="28" width="5"  height="8" rx="2.5" fill="#4b5563"/>
+        <rect x="7"  y="33" width="7"  height="2.5" rx="1" fill="#374151"/>
+        <rect x="15" y="33" width="7"  height="2.5" rx="1" fill="#374151"/>
+      </svg>`,
+
+      archer: `<svg viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="14" cy="9"  rx="9" ry="10" fill="#166534"/>
+        <ellipse cx="14" cy="11" rx="6.5" ry="8" fill="#fde68a"/>
+        <ellipse cx="14" cy="13" rx="5.5" ry="4.5" fill="#fcd34d"/>
+        <circle cx="11.5" cy="12" r="1.3" fill="#1f2937"/>
+        <circle cx="16.5" cy="12" r="1.3" fill="#1f2937"/>
+        <circle cx="12"   cy="12" r="0.5" fill="white"/>
+        <circle cx="17"   cy="12" r="0.5" fill="white"/>
+        <path d="M12,15.5 Q14,17 16,15.5" fill="none" stroke="#92400e" stroke-width="1.1" stroke-linecap="round"/>
+        <rect x="7" y="19" width="14" height="13" rx="3" fill="#15803d"/>
+        <rect x="17" y="16" width="4" height="13" rx="2" fill="#92400e"/>
+        <line x1="18.5" y1="16" x2="19.5" y2="13" stroke="#d97706" stroke-width="1.2"/>
+        <line x1="20"   y1="16" x2="21"   y2="13" stroke="#d97706" stroke-width="1.2"/>
+        <path d="M3,13 Q1,21 3,30" stroke="#92400e" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <line x1="3" y1="13" x2="3" y2="30" stroke="#fef08a" stroke-width="1.2"/>
+        <rect x="3" y="20" width="9" height="2.5" rx="1.2" fill="#fde68a"/>
+        <line x1="3" y1="21.2" x2="17" y2="21.2" stroke="#92400e" stroke-width="1.8"/>
+        <polygon points="17,19.8 22,21.2 17,22.6" fill="#9ca3af"/>
+        <rect x="9" y="31" width="4" height="5" rx="2" fill="#166534"/>
+        <rect x="15" y="31" width="4" height="5" rx="2" fill="#166534"/>
+      </svg>`,
+
+      valkyrie: `<svg viewBox="0 0 30 36" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="3"  width="10" height="10" rx="4.5" fill="#60a5fa"/>
+        <polygon points="10,7  4,3  8,11"  fill="#e2e8f0"/>
+        <polygon points="20,7 26,3 22,11" fill="#e2e8f0"/>
+        <ellipse cx="15" cy="14" rx="6.5" ry="5.5" fill="#fde68a"/>
+        <circle cx="12.5" cy="13" r="1.5" fill="#1e3a5f"/>
+        <circle cx="17.5" cy="13" r="1.5" fill="#1e3a5f"/>
+        <circle cx="13"   cy="13" r="0.5" fill="white"/>
+        <circle cx="18"   cy="13" r="0.5" fill="white"/>
+        <rect x="12" y="17" width="6" height="1.2" rx="0.6" fill="#92400e"/>
+        <rect x="7" y="19" width="16" height="13" rx="3" fill="#1d4ed8"/>
+        <rect x="7" y="23" width="16" height="1.5" fill="#1e40af"/>
+        <rect x="5"  y="18" width="5" height="6" rx="2.5" fill="#2563eb"/>
+        <rect x="20" y="18" width="5" height="6" rx="2.5" fill="#2563eb"/>
+        <rect x="21" y="12" width="3"   height="18" rx="1.5" fill="#92400e"/>
+        <rect x="17" y="10" width="11"  height="5"  rx="2"   fill="#9ca3af"/>
+        <rect x="17" y="13" width="5"   height="7"  rx="2"   fill="#9ca3af"/>
+        <rect x="9"  y="31" width="5"   height="5"  rx="2.5" fill="#1e40af"/>
+        <rect x="16" y="31" width="5"   height="5"  rx="2.5" fill="#1e40af"/>
+      </svg>`,
+
+      giant: `<svg viewBox="0 0 34 36" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="17" cy="7"  r="7.5" fill="#a16207"/>
+        <circle cx="13.5" cy="6" r="2"   fill="#fef08a"/>
+        <circle cx="20.5" cy="6" r="2"   fill="#fef08a"/>
+        <circle cx="14"   cy="6.2" r="1"  fill="#111"/>
+        <circle cx="21"   cy="6.2" r="1"  fill="#111"/>
+        <rect x="11" y="4" width="12" height="2" rx="1" fill="#78350f"/>
+        <rect x="13" y="9" width="8"  height="2.5" rx="1.2" fill="#78350f"/>
+        <circle cx="6"  cy="16" r="6" fill="#a16207"/>
+        <circle cx="28" cy="16" r="6" fill="#a16207"/>
+        <rect x="5" y="14" width="24" height="16" rx="5" fill="#92400e"/>
+        <rect x="5" y="20" width="24" height="2"  fill="#78350f" opacity="0.55"/>
+        <rect x="5" y="25" width="24" height="1.5" fill="#78350f" opacity="0.4"/>
+        <rect x="24" y="7"  width="4.5" height="20" rx="2.2" fill="#92400e"/>
+        <ellipse cx="26" cy="7"  rx="5.5" ry="6.5" fill="#713f12"/>
+        <polygon points="26,1  23,0  29,0"  fill="#d97706"/>
+        <polygon points="32,8  34,5  34,11" fill="#d97706"/>
+        <polygon points="26,14 23,16 29,16" fill="#d97706"/>
+        <rect x="9"  y="29" width="7" height="7" rx="3"   fill="#78350f"/>
+        <rect x="18" y="29" width="7" height="7" rx="3"   fill="#78350f"/>
+        <rect x="8"  y="33" width="9" height="3" rx="1.5" fill="#451a03"/>
+        <rect x="17" y="33" width="9" height="3" rx="1.5" fill="#451a03"/>
+      </svg>`
+    };
+
+    const CARD_LIBRARY = {
+      goblin:   { name: "Goblin",   emoji: "👺", rarity: "Common",    cost: 2, hp: 55,  damage: 7,  speed: 1.7, range: 18,  attackSpeed: 700 },
+      wizard:   { name: "Wizard",   emoji: "🧙", rarity: "Rare",      cost: 4, hp: 90,  damage: 15, speed: 1.0, range: 95,  attackSpeed: 1100 },
+      dragon:   { name: "Dragon",   emoji: "🐉", rarity: "Epic",      cost: 5, hp: 145, damage: 22, speed: 0.9, range: 110, attackSpeed: 1200 },
+      fireball: { name: "Fireball", emoji: "💥", rarity: "Rare",      cost: 4, spell: true, damage: 45 },
+      knight:   { name: "Knight",   emoji: "🗡️", rarity: "Common",    cost: 3, hp: 100, damage: 11, speed: 1.2, range: 20,  attackSpeed: 850 },
+      archer:   { name: "Archer",   emoji: "🏹", rarity: "Common",    cost: 3, hp: 68,  damage: 10, speed: 1.2, range: 105, attackSpeed: 950 },
+      valkyrie: { name: "Valkyrie", emoji: "🪓", rarity: "Epic",      cost: 4, hp: 130, damage: 18, speed: 1.0, range: 24,  attackSpeed: 1000 },
+      giant:    { name: "Giant",    emoji: "🛡️", rarity: "Rare",      cost: 5, hp: 210, damage: 24, speed: 0.75,range: 22,  attackSpeed: 1200 }
+    };
+
+    const PACK_POOL = ["dragon", "fireball", "knight", "archer", "valkyrie", "giant"];
+    const STARTER_CARDS = ["goblin", "wizard"];
+    const PACK_COST = 120;
+    const UPGRADE_COST = 150;
+
+    let currentUser = null;
+    let accounts = JSON.parse(localStorage.getItem("clashArenaAccounts") || "{}");
+
+    let troops = [];
+    let towers = {};
+    let draggedCard = null;
+    let elixir = 5;
+    let maxElixir = 10;
+    let battleTime = 180;
+    let battleActive = false;
+    let gameLoopId = null;
+    let enemySpawner = null;
+    let towerShooter = null;
+    let elixirTimer = null;
+    let timerInterval = null;
+    let arena = null;
+    let cardBar = null;
+    let activeDeck = [];
+
+    function defaultProfile(username, password){
+      return {
+        username,
+        password,
+        gold: 250,
+        level: 1,
+        attackBonus: 0,
+        cards: [...STARTER_CARDS],
+        crowns: 0,
+        wins: 0
+      };
+    }
+
+    function saveAccounts(){
+      localStorage.setItem("clashArenaAccounts", JSON.stringify(accounts));
+    }
+
+    function showScreen(id){
+      document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    }
+
+    function signup(){
+      const user = document.getElementById("signupUser").value.trim();
+      const pass = document.getElementById("signupPass").value.trim();
+
+      if(!user || !pass){
+        alert("Please enter a username and password.");
+        return;
+      }
+      if(accounts[user]){
+        alert("That username already exists.");
+        return;
+      }
+
+      accounts[user] = defaultProfile(user, pass);
+      saveAccounts();
+      alert("Account created successfully.");
+      document.getElementById("signupUser").value = "";
+      document.getElementById("signupPass").value = "";
+      showScreen("loginScreen");
+    }
+
+    function login(){
+      const user = document.getElementById("loginUser").value.trim();
+      const pass = document.getElementById("loginPass").value.trim();
+
+      if(!accounts[user] || accounts[user].password !== pass){
+        alert("Wrong username or password.");
+        return;
+      }
+
+      currentUser = user;
+      document.getElementById("loginUser").value = "";
+      document.getElementById("loginPass").value = "";
+      loadHome();
+    }
+
+    function logout(){
+      stopBattle();
+      currentUser = null;
+      showScreen("loginScreen");
+    }
+
+    function getProfile(){
+      return accounts[currentUser];
+    }
+
+    function loadHome(){
+      const profile = getProfile();
+      document.getElementById("welcomeText").textContent = `Welcome, ${profile.username}`;
+      document.getElementById("goldValue").textContent = profile.gold;
+      document.getElementById("levelValue").textContent = profile.level;
+      document.getElementById("attackValue").textContent = profile.attackBonus;
+      document.getElementById("cardCountValue").textContent = profile.cards.length;
+      document.getElementById("rewardInfo").textContent =
+        `Current win reward: ${getBattleReward()} gold • Enemy difficulty scales with your level • Cards owned: ${profile.cards.length}`;
+      renderOwnedCards();
+      showScreen("homeScreen");
+      saveAccounts();
+    }
+
+    function renderOwnedCards(){
+      const grid = document.getElementById("cardsGrid");
+      const profile = getProfile();
+      grid.innerHTML = "";
+
+      profile.cards.forEach(cardId => {
+        const c = CARD_LIBRARY[cardId];
+        if(!c) return;
+
+        const card = document.createElement("div");
+        card.className = "card-item";
+
+        const rarityClass =
+          c.rarity === "Common" ? "rarity-common" :
+          c.rarity === "Rare" ? "rarity-rare" :
+          c.rarity === "Epic" ? "rarity-epic" :
+          "rarity-legendary";
+
+        card.innerHTML = `
+          <div class="card-top">
+            <div class="card-emoji">${c.emoji}</div>
+            <div class="rarity-badge ${rarityClass}">${c.rarity}</div>
+          </div>
+          <div class="card-name">${c.name}</div>
+          <div class="card-meta">Cost: ${c.cost || 0} elixir</div>
+          <div class="card-power">${c.spell ? "Spell card" : `HP ${c.hp} • DMG ${c.damage}`}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function buyCardPack(){
+      const profile = getProfile();
+      if(profile.gold < PACK_COST){
+        alert("Not enough gold for a pack.");
+        return;
+      }
+
+      profile.gold -= PACK_COST;
+
+      const randomCard = PACK_POOL[Math.floor(Math.random() * PACK_POOL.length)];
+      if(!profile.cards.includes(randomCard)){
+        profile.cards.push(randomCard);
+        alert(`You unlocked ${CARD_LIBRARY[randomCard].name}!`);
+      } else {
+        profile.gold += 50;
+        alert(`Duplicate ${CARD_LIBRARY[randomCard].name}. You got 50 gold back.`);
+      }
+
+      saveAccounts();
+      loadHome();
+    }
+
+    function buyCardPackFromBattle(){
+      buyCardPack();
+      if(document.getElementById("battleScreen").classList.contains("active")){
+        renderBattleDeck();
+      }
+    }
+
+    function upgradeArmy(){
+      const profile = getProfile();
+      if(profile.gold < UPGRADE_COST){
+        alert("Not enough gold to upgrade.");
+        return;
+      }
+
+      profile.gold -= UPGRADE_COST;
+      profile.attackBonus += 2;
+      alert(`Army upgraded. Attack bonus is now ${profile.attackBonus}.`);
+      saveAccounts();
+      loadHome();
+    }
+
+    function getBattleReward(){
+      const profile = getProfile();
+      return 70 + (profile.level * 25);
+    }
+
+    function backToHomeFromBattle(){
+      stopBattle();
+      loadHome();
+    }
+
+    function startBattle(){
+      showScreen("battleScreen");
+      document.getElementById("battleUserName").textContent = getProfile().username;
+      document.getElementById("battleStatus").textContent = "Drag a card into your lower half of the arena to deploy it.";
+      document.getElementById("playerCrowns").textContent = getProfile().crowns || 0;
+      document.getElementById("enemyCrowns").textContent = Math.max(0, getProfile().level - 1);
+
+      arena = document.getElementById("arena");
+      cardBar = document.getElementById("cardbar");
+
+      resetBattleField();
+      renderBattleDeck();
+      startBattleSystems();
+    }
+
+    function resetBattleField(){
+      troops = [];
+      battleActive = true;
+      elixir = 5;
+      battleTime = 180;
+
+      document.querySelectorAll(".unit, .explosion").forEach(el => el.remove());
+
+      towers = {
+        enemyKing:  { id:"enemyKing",  side:"enemy",  hp: 320 + getProfile().level * 18, maxHp: 320 + getProfile().level * 18 },
+        enemyLeft:  { id:"enemyLeft",  side:"enemy",  hp: 220 + getProfile().level * 14, maxHp: 220 + getProfile().level * 14 },
+        enemyRight: { id:"enemyRight", side:"enemy",  hp: 220 + getProfile().level * 14, maxHp: 220 + getProfile().level * 14 },
+        playerKing: { id:"playerKing", side:"player", hp: 360 + getProfile().level * 10, maxHp: 360 + getProfile().level * 10 },
+        playerLeft: { id:"playerLeft", side:"player", hp: 240 + getProfile().level * 8,  maxHp: 240 + getProfile().level * 8 },
+        playerRight:{ id:"playerRight",side:"player", hp: 240 + getProfile().level * 8,  maxHp: 240 + getProfile().level * 8 }
+      };
+
+      updateTowerBars();
+      updateElixirUI();
+      updateTimerUI();
+    }
+
+    function renderBattleDeck(){
+      const profile = getProfile();
+      activeDeck = profile.cards.slice(0, 4);
+
+      if(activeDeck.length < 4){
+        const extras = Object.keys(CARD_LIBRARY).filter(c => !activeDeck.includes(c) && profile.cards.includes(c));
+        while(activeDeck.length < 4 && extras.length){
+          activeDeck.push(extras.shift());
+        }
+      }
+
+      cardBar.innerHTML = "";
+
+      activeDeck.forEach(cardId => {
+        const data = CARD_LIBRARY[cardId];
+        const card = document.createElement("div");
+        card.className = "card";
+        card.setAttribute("draggable", "true");
+        card.dataset.card = cardId;
+        card.innerHTML = `
+          <div class="card-cost">${data.cost || 0}</div>
+          <div style="font-size:22px;">${data.emoji}</div>
+          <div class="card-name-small">${data.name}</div>
+        `;
+        card.addEventListener("dragstart", () => {
+          draggedCard = cardId;
+        });
+        cardBar.appendChild(card);
+      });
+
+      setupArenaDrop();
+    }
+
+    function setupArenaDrop(){
+      arena.ondragover = (e) => e.preventDefault();
+      arena.ondrop = (e) => {
+        e.preventDefault();
+        if(!battleActive || !draggedCard) return;
+
+        const rect = arena.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if(y < rect.height / 2){
+          document.getElementById("battleStatus").textContent = "You can only deploy cards on your side.";
+          return;
+        }
+
+        deployCard(draggedCard, x, y, "player");
+      };
+    }
+
+    function deployCard(cardId, x, y, side){
+      const data = CARD_LIBRARY[cardId];
+      if(!data) return;
+
+      if(elixir < data.cost){
+        document.getElementById("battleStatus").textContent = "Not enough elixir.";
+        return;
+      }
+
+      elixir -= data.cost;
+      updateElixirUI();
+
+      if(data.spell){
+        castFireball(x, y, side, data.damage);
+        document.getElementById("battleStatus").textContent = `${data.name} cast!`;
+        return;
+      }
+
+      spawnUnit(cardId, x, y, side);
+      document.getElementById("battleStatus").textContent = `${data.name} deployed.`;
+    }
+
+    function spawnUnit(cardId, x, y, side){
+      const data = CARD_LIBRARY[cardId];
+      const unit = document.createElement("div");
+      unit.className = `unit ${side}`;
+      const sprite = SPRITES[cardId] || `<svg viewBox="0 0 28 34" xmlns="http://www.w3.org/2000/svg"><text y="26" font-size="24">${data.emoji}</text></svg>`;
+      unit.innerHTML = `
+        <div class="unit-sprite">${sprite}</div>
+        <div class="unit-health"><div class="unit-health-fill"></div></div>
+      `;
+
+      unit.style.left = `${Math.max(5, Math.min(375, x - 22))}px`;
+
+      const laneX = x < 210 ? 112 : 308;
+
+      if(side === "player"){
+        unit.style.bottom = "118px";
+      } else {
+        unit.style.top = "118px";
+      }
+
+      arena.appendChild(unit);
+      setTimeout(() => unit.classList.add("is-walking"), 290);
+
+      troops.push({
+        el: unit,
+        side,
+        cardId,
+        laneX,
+        hp: data.hp,
+        maxHp: data.hp,
+        damage: data.damage + (side === "player" ? getProfile().attackBonus : Math.floor(getProfile().level * 0.8)),
+        speed: data.speed,
+        range: data.range,
+        attackSpeed: data.attackSpeed,
+        lastAttack: 0
+      });
+    }
+
+    function castFireball(x, y, side, damage){
+      const boom = document.createElement("div");
+      boom.className = "explosion";
+      boom.style.left = `${x}px`;
+      boom.style.top = `${y}px`;
+      arena.appendChild(boom);
+
+      troops.forEach(unit => {
+        if(unit.side === side) return;
+        const rect = unit.el.getBoundingClientRect();
+        const arenaRect = arena.getBoundingClientRect();
+        const ux = rect.left - arenaRect.left + rect.width / 2;
+        const uy = rect.top - arenaRect.top + rect.height / 2;
+        const dx = ux - x;
+        const dy = uy - y;
+        if(Math.hypot(dx, dy) < 70){
+          unit.hp -= damage;
+          updateUnitHealth(unit);
+        }
+      });
+
+      setTimeout(() => boom.remove(), 380);
+      cleanupUnits();
+    }
+
+    function updateUnitHealth(unit){
+      const fill = unit.el.querySelector(".unit-health-fill");
+      if(fill){
+        fill.style.width = `${Math.max(0, (unit.hp / unit.maxHp) * 100)}%`;
+      }
+    }
+
+    function updateTowerBars(){
+      Object.values(towers).forEach(t => {
+        const fillId = `${t.id}Health`;
+        const fill = document.getElementById(fillId);
+        if(fill){
+          fill.style.width = `${Math.max(0, (t.hp / t.maxHp) * 100)}%`;
+        }
+      });
+    }
+
+    function updateElixirUI(){
+      const val = Math.floor(elixir);
+      document.getElementById("elixirCount").textContent = val;
+      document.querySelectorAll(".elixir-pip").forEach(pip => {
+        const n = parseInt(pip.dataset.pip);
+        pip.classList.toggle("filled", n <= val);
+      });
+      // Update card affordability
+      document.querySelectorAll(".card[data-card]").forEach(card => {
+        const data = CARD_LIBRARY[card.dataset.card];
+        if(!data) return;
+        const cost = data.cost || 0;
+        card.classList.toggle("can-afford",  elixir >= cost);
+        card.classList.toggle("cant-afford", elixir <  cost);
+      });
+    }
+
+    function updateTimerUI(){
+      const m = Math.floor(battleTime / 60);
+      const s = battleTime % 60;
+      const el = document.getElementById("timer");
+      el.textContent = `${m}:${s < 10 ? "0" + s : s}`;
+      el.classList.toggle("low", battleTime <= 30);
+    }
+
+    function startBattleSystems(){
+      stopBattle(false);
+
+      battleActive = true;
+
+      elixirTimer = setInterval(() => {
+        if(!battleActive) return;
+        if(elixir < maxElixir){
+          elixir = Math.min(maxElixir, elixir + 1);
+          updateElixirUI();
+        }
+      }, 1400);
+
+      timerInterval = setInterval(() => {
+        if(!battleActive) return;
+        battleTime--;
+        updateTimerUI();
+
+        if(battleTime <= 0){
+          finishBattleByHp();
+        }
+      }, 1000);
+
+      enemySpawner = setInterval(() => {
+        if(!battleActive) return;
+        enemyDeploy();
+      }, 3000);
+
+      towerShooter = setInterval(() => {
+        if(!battleActive) return;
+        towerAutoShoot();
+      }, 850);
+
+      const loop = () => {
+        if(!battleActive) return;
+        updateUnits();
+        handleCombat();
+        cleanupUnits();
+        checkTowerDamage();
+        gameLoopId = requestAnimationFrame(loop);
+      };
+      gameLoopId = requestAnimationFrame(loop);
+    }
+
+    function stopBattle(clearTimers = true){
+      battleActive = false;
+      if(gameLoopId) cancelAnimationFrame(gameLoopId);
+      if(clearTimers){
+        clearInterval(enemySpawner);
+        clearInterval(towerShooter);
+        clearInterval(elixirTimer);
+        clearInterval(timerInterval);
+      } else {
+        clearInterval(enemySpawner);
+        clearInterval(towerShooter);
+        clearInterval(elixirTimer);
+        clearInterval(timerInterval);
+      }
+    }
+
+    function enemyDeploy(){
+      const owned = getProfile().level >= 4 ? ["goblin","wizard","dragon","knight","archer"] : ["goblin","wizard","knight","archer"];
+      const choice = owned[Math.floor(Math.random() * owned.length)];
+      const laneX = Math.random() < .5 ? 110 : 308;
+      const spawnX = laneX + (Math.random() * 26 - 13);
+      spawnUnit(choice, spawnX, 118, "enemy");
+    }
+
+    function updateUnits(){
+      troops.forEach(unit => {
+        if(unit.laneX){
+          const currentLeft = parseFloat(unit.el.style.left || "0");
+          const targetLeft = unit.laneX - 18;
+          const diff = targetLeft - currentLeft;
+          unit.el.style.left = `${currentLeft + diff * 0.08}px`;
+        }
+
+        if(unit.side === "player"){
+          const bottom = parseFloat(unit.el.style.bottom || "0");
+          unit.el.style.bottom = `${bottom + unit.speed}px`;
+        } else {
+          const top = parseFloat(unit.el.style.top || "0");
+          unit.el.style.top = `${top + unit.speed}px`;
+        }
+      });
+    }
+
+    function getUnitCenter(unit){
+      const rect = unit.el.getBoundingClientRect();
+      const arenaRect = arena.getBoundingClientRect();
+      return {
+        x: rect.left - arenaRect.left + rect.width / 2,
+        y: rect.top - arenaRect.top + rect.height / 2
+      };
+    }
+
+    function handleCombat(){
+      const now = Date.now();
+
+      troops.forEach(unit => {
+        const enemyUnits = troops.filter(t => t.side !== unit.side);
+        const myPos = getUnitCenter(unit);
+
+        let closest = null;
+        let closestDist = Infinity;
+
+        enemyUnits.forEach(enemy => {
+          const ePos = getUnitCenter(enemy);
+          const dist = Math.hypot(ePos.x - myPos.x, ePos.y - myPos.y);
+          if(dist < closestDist){
+            closest = enemy;
+            closestDist = dist;
+          }
+        });
+
+        if(closest && closestDist <= unit.range){
+          if(now - unit.lastAttack >= unit.attackSpeed){
+            closest.hp -= unit.damage;
+            unit.lastAttack = now;
+            updateUnitHealth(closest);
+            // Attack animation: restart by removing then re-adding class
+            unit.el.classList.remove("is-attacking");
+            void unit.el.offsetWidth;
+            unit.el.classList.add("is-attacking");
+            setTimeout(() => unit.el.classList.remove("is-attacking"), 400);
+          }
+        }
+      });
+    }
+
+    function cleanupUnits(){
+      troops = troops.filter(unit => {
+        const offscreenPlayer = unit.side === "player" && parseFloat(unit.el.style.bottom || "0") > 610;
+        const offscreenEnemy = unit.side === "enemy" && parseFloat(unit.el.style.top || "0") > 610;
+
+        if(offscreenPlayer || offscreenEnemy){
+          unit.el.remove();
+          return false;
+        }
+
+        if(unit.hp <= 0){
+          unit.el.classList.remove("is-walking", "is-attacking");
+          unit.el.classList.add("is-dying");
+          setTimeout(() => unit.el.remove(), 540);
+          return false;
+        }
+
+        return true;
+      });
+    }
+
+    function towerAutoShoot(){
+      const now = Date.now();
+      Object.values(towers).forEach(tower => {
+        if(tower.hp <= 0) return;
+
+        const towerEl = document.getElementById(tower.id);
+        const tRect = towerEl.getBoundingClientRect();
+        const aRect = arena.getBoundingClientRect();
+        const towerPos = {
+          x: tRect.left - aRect.left + tRect.width / 2,
+          y: tRect.top - aRect.top + tRect.height / 2
+        };
+
+        let bestTarget = null;
+        let bestDist = Infinity;
+
+        troops.forEach(unit => {
+          if(unit.side === tower.side) return;
+          const pos = getUnitCenter(unit);
+          const dist = Math.hypot(pos.x - towerPos.x, pos.y - towerPos.y);
+          if(dist < 135 && dist < bestDist){
+            bestDist = dist;
+            bestTarget = unit;
+          }
+        });
+
+        if(bestTarget){
+          bestTarget.hp -= 7 + (tower.side === "enemy" ? Math.floor(getProfile().level / 2) : 0);
+          updateUnitHealth(bestTarget);
+        }
+      });
+
+      cleanupUnits();
+    }
+
+    function checkTowerDamage(){
+      troops.forEach(unit => {
+        const pos = getUnitCenter(unit);
+
+        if(unit.side === "player"){
+          if(pos.y < 145){
+            const target = pos.x < 210 ? towers.enemyLeft : towers.enemyRight;
+            if(target.hp > 0){
+              target.hp -= unit.damage;
+              unit.hp = 0;
+            } else {
+              towers.enemyKing.hp -= unit.damage;
+              unit.hp = 0;
+            }
+          }
+        } else {
+          if(pos.y > 495){
+            const target = pos.x < 210 ? towers.playerLeft : towers.playerRight;
+            if(target.hp > 0){
+              target.hp -= unit.damage;
+              unit.hp = 0;
+            } else {
+              towers.playerKing.hp -= unit.damage;
+              unit.hp = 0;
+            }
+          }
+        }
+      });
+
+      updateTowerBars();
+      cleanupUnits();
+
+      if(towers.enemyKing.hp <= 0){
+        finishBattle(true);
+      } else if(towers.playerKing.hp <= 0){
+        finishBattle(false);
+      }
+    }
+
+    function finishBattleByHp(){
+      const enemyTotal = towers.enemyKing.hp + towers.enemyLeft.hp + towers.enemyRight.hp;
+      const playerTotal = towers.playerKing.hp + towers.playerLeft.hp + towers.playerRight.hp;
+      finishBattle(playerTotal >= enemyTotal);
+    }
+
+    function finishBattle(playerWon){
+      if(!battleActive) return;
+
+      stopBattle();
+
+      const profile = getProfile();
+
+      if(playerWon){
+        const reward = getBattleReward();
+        profile.gold += reward;
+        profile.level += 1;
+        profile.wins += 1;
+        profile.crowns += 1;
+        document.getElementById("battleStatus").textContent = `Victory! You earned ${reward} gold and leveled up.`;
+        alert(`Victory! You earned ${reward} gold.`);
+      } else {
+        document.getElementById("battleStatus").textContent = "Defeat. Train your army and open more packs.";
+        alert("Defeat. Upgrade your army and try again.");
+      }
+
+      saveAccounts();
+      setTimeout(() => {
+        loadHome();
+      }, 500);
+    }
+
+    // Touch quick deploy for phones
+    document.addEventListener("click", (e) => {
+      if(!battleActive) return;
+      const card = e.target.closest(".card");
+      if(card){
+        draggedCard = card.dataset.card;
+      }
+    });
+
+    document.getElementById("arena").addEventListener("click", (e) => {
+      if(!battleActive || !draggedCard) return;
+      if(!document.getElementById("battleScreen").classList.contains("active")) return;
+
+      const rect = arena.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if(y < rect.height / 2) return;
+
+      deployCard(draggedCard, x, y, "player");
+    });
+  </script>
+</body>
+</html>
