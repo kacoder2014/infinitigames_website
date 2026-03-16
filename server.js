@@ -277,6 +277,52 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
+    // ── Admin ──
+    if (url === '/api/admin/users' && req.method === 'GET') {
+      const username = sessionUser(req);
+      if (!username || username.toLowerCase() !== 'karan') return json(res, 403, { error: 'Forbidden' });
+      const list = Object.values(users).map(u => ({
+        username: u.username,
+        online:   isOnline(u.username),
+      })).sort((a, b) => a.username.toLowerCase().localeCompare(b.username.toLowerCase()));
+      return json(res, 200, { users: list });
+    }
+
+    if (url === '/api/admin/delete-user' && req.method === 'POST') {
+      const username = sessionUser(req);
+      if (!username || username.toLowerCase() !== 'karan') return json(res, 403, { error: 'Forbidden' });
+      const { username: targetRaw = '' } = await readBody(req);
+      const target = canonicalUser(targetRaw);
+      if (!target) return json(res, 404, { error: 'User not found.' });
+      if (target.toLowerCase() === 'karan') return json(res, 400, { error: 'Cannot delete admin.' });
+
+      // Remove from users store
+      delete users[target.toLowerCase()];
+      saveUsers();
+
+      // Remove all active sessions for this user
+      for (const [token, u] of sessions) if (u.toLowerCase() === target.toLowerCase()) sessions.delete(token);
+
+      // Disconnect their WS connections
+      const tLow = target.toLowerCase();
+      for (const [ws, c] of clients) if (c.username && c.username.toLowerCase() === tLow) ws.close();
+
+      // Remove from friends data
+      const tFD = friendsData[target];
+      if (tFD) {
+        // Remove target from everyone else's lists
+        for (const [user, fd] of Object.entries(friendsData)) {
+          fd.friends  = fd.friends.filter(u => u.toLowerCase() !== tLow);
+          fd.incoming = fd.incoming.filter(u => u.toLowerCase() !== tLow);
+          fd.outgoing = fd.outgoing.filter(u => u.toLowerCase() !== tLow);
+        }
+        delete friendsData[target];
+      }
+      saveFriends();
+
+      return json(res, 200, { ok: true });
+    }
+
     return json(res, 404, { error: 'Unknown API route' });
   }
 

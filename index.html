@@ -1073,6 +1073,7 @@
     <li><a href="#leaderboard">Leaderboard</a></li>
   </ul>
   <div id="navUserArea" style="display:flex;align-items:center;gap:.6rem;">
+    <button id="adminBtn" style="display:none;" onclick="toggleAdminPanel()">🛡️ Admin</button>
     <button id="friendsBtn" style="display:none;" onclick="toggleFriendsPanel()">
       👥 Friends <span id="friendsBadge"></span>
     </button>
@@ -1369,12 +1370,14 @@
   }
 
   function renderNav() {
+    const adminBtn    = document.getElementById('adminBtn');
     const friendsBtn  = document.getElementById('friendsBtn');
     const navUsername = document.getElementById('navUsername');
     const logoutBtn   = document.getElementById('logoutBtn');
     const navJoinBtn  = document.getElementById('navJoinBtn');
     if (currentUser) {
       const [,fg] = colorFor(currentUser);
+      if (adminBtn) adminBtn.style.display = currentUser.toLowerCase() === 'karan' ? 'block' : 'none';
       friendsBtn.style.display  = 'flex';
       navUsername.style.display = 'flex';
       navUsername.innerHTML = `<div class="avatar-sm" style="background:linear-gradient(135deg,${fg},#06b6d4)">${esc(currentUser.charAt(0).toUpperCase())}</div>${esc(currentUser)}`;
@@ -1382,6 +1385,7 @@
       if (navJoinBtn) navJoinBtn.style.display = 'none';
       if (typeof loadFriends === 'function') loadFriends();
     } else {
+      if (adminBtn)    adminBtn.style.display    = 'none';
       if (friendsBtn)  friendsBtn.style.display  = 'none';
       if (navUsername) navUsername.style.display  = 'none';
       if (logoutBtn)   logoutBtn.style.display    = 'none';
@@ -1847,7 +1851,133 @@ function showFriendToast(msg) {
   from { opacity: 0; transform: translate(-50%, 10px); }
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ── Admin panel ── */
+#adminOverlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(8,11,18,.85);
+  align-items: center; justify-content: center;
+}
+#adminCard {
+  background: #0f1623;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: min(520px, 94vw);
+  max-height: 80vh;
+  display: flex; flex-direction: column; gap: 1.2rem;
+  box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}
+#adminCard h2 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem; font-weight: 700;
+  background: linear-gradient(135deg,#ef4444,#f59e0b);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#adminCard .admin-close {
+  position: absolute; top: 1rem; right: 1rem;
+  background: none; border: none; color: #64748b;
+  font-size: 1.2rem; cursor: pointer;
+}
+#adminUserList {
+  overflow-y: auto; display: flex; flex-direction: column; gap: .5rem;
+}
+.admin-user-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: .6rem; padding: .65rem 1rem;
+}
+.admin-user-row .au-name {
+  font-size: .9rem; font-weight: 600; color: #e2e8f0;
+  display: flex; align-items: center; gap: .5rem;
+}
+.admin-user-row .au-name .dot-online  { width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0; }
+.admin-user-row .au-name .dot-offline { width:8px;height:8px;border-radius:50%;background:#475569;flex-shrink:0; }
+.admin-del-btn {
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3);
+  color: #f87171; padding: .35rem .85rem; border-radius: 9999px;
+  font-size: .78rem; font-weight: 700; cursor: pointer; transition: background .2s;
+}
+.admin-del-btn:hover { background: rgba(239,68,68,.25); }
+#adminBtn {
+  background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25);
+  color: #f87171; padding: .4rem .9rem; border-radius: 9999px;
+  font-size: .82rem; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background .2s;
+}
+#adminBtn:hover { background: rgba(239,68,68,.22); }
 </style>
+
+<!-- ADMIN SCRIPT -->
+<script>
+let adminOpen = false;
+
+function toggleAdminPanel() {
+  adminOpen = !adminOpen;
+  document.getElementById('adminOverlay').style.display = adminOpen ? 'flex' : 'none';
+  if (adminOpen) loadAdminUsers();
+}
+
+async function loadAdminUsers() {
+  const list = document.getElementById('adminUserList');
+  list.innerHTML = '<div style="color:#64748b;font-size:.85rem;">Loading…</div>';
+  try {
+    const r = await fetch('/api/admin/users');
+    if (!r.ok) { list.innerHTML = '<div style="color:#ef4444;">Access denied.</div>'; return; }
+    const { users } = await r.json();
+    if (!users.length) { list.innerHTML = '<div style="color:#64748b;">No users found.</div>'; return; }
+    list.innerHTML = users.map(u => `
+      <div class="admin-user-row">
+        <div class="au-name">
+          <div class="${u.online ? 'dot-online' : 'dot-offline'}"></div>
+          ${fEsc(u.username)}
+          ${u.online ? '<span style="font-size:.72rem;color:#10b981;">(online)</span>' : ''}
+        </div>
+        ${u.username.toLowerCase() !== 'karan' ? `<button class="admin-del-btn" onclick="adminDeleteUser('${fEsc(u.username)}')">Delete</button>` : '<span style="font-size:.75rem;color:#64748b;">you</span>'}
+      </div>`).join('');
+  } catch {
+    list.innerHTML = '<div style="color:#ef4444;">Network error.</div>';
+  }
+}
+
+async function adminDeleteUser(username) {
+  if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
+  try {
+    const r = await fetch('/api/admin/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      showFriendToast(`🗑️ Deleted user: ${username}`);
+      loadAdminUsers();
+    } else {
+      showFriendToast(`✕ ${d.error}`);
+    }
+  } catch {
+    showFriendToast('✕ Network error.');
+  }
+}
+
+// Close admin panel on backdrop click
+document.getElementById('adminOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('adminOverlay')) toggleAdminPanel();
+});
+</script>
+
+<!-- ADMIN PANEL -->
+<div id="adminOverlay">
+  <div id="adminCard" style="position:relative;">
+    <button class="admin-close" onclick="toggleAdminPanel()">✕</button>
+    <h2>🛡️ Admin — User Management</h2>
+    <div style="font-size:.8rem;color:#64748b;">Click delete to permanently remove a user and all their data.</div>
+    <div id="adminUserList"><div style="color:#64748b;font-size:.85rem;">Loading…</div></div>
+  </div>
+</div>
 
 <!-- FOOTER -->
 <footer>
