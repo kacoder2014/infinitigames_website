@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 3000;
 
 const MIME_TYPES = {
   '.html': 'text/html',
+  '.htm':  'text/html',
   '.css':  'text/css',
   '.js':   'application/javascript',
   '.json': 'application/json',
