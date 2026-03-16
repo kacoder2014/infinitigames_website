@@ -1773,7 +1773,6 @@ async function removeFriend(username) {
 
 // ── Presence ───────────────────────────────────────────────
 function setPresence(gameHref) {
-  if (!window._currentUser) return;
   fetch('/api/presence', {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ game: gameHref })
@@ -1835,10 +1834,6 @@ function showFriendToast(msg) {
   setTimeout(() => t.remove(), 4000);
 }
 
-// Expose currentUser to presence system
-Object.defineProperty(window, '_currentUser', {
-  get() { return typeof currentUser !== 'undefined' ? currentUser : null; }
-});
 </script>
 
 <style>
