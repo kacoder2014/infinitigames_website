@@ -1237,17 +1237,16 @@
      CHECK SESSION ON LOAD
   ══════════════════════════════════════════════════════════ */
   async function checkSession() {
+    // Show modal instantly — don't make user wait for the network
+    showModal();
+    renderNav();
     try {
       const r = await fetch('/api/me');
       if (r.ok) {
         const { username } = await r.json();
-        onLoggedIn(username);
-        return;
+        onLoggedIn(username); // already logged in — hide modal silently
       }
     } catch {}
-    // Not logged in — show modal
-    showModal();
-    renderNav();
   }
 
   /* ══════════════════════════════════════════════════════════

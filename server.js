@@ -11,8 +11,13 @@ const USERS_FILE = path.join(__dirname, 'users.json');
 let users = {};
 try { users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch {}
 
+let savePending = false;
 function saveUsers() {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+  if (savePending) return;
+  savePending = true;
+  setImmediate(() => {
+    fs.writeFile(USERS_FILE, JSON.stringify(users), () => { savePending = false; });
+  });
 }
 
 // ── Sessions (token → username) ───────────────────────────────
