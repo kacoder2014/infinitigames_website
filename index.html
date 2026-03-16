@@ -1149,7 +1149,7 @@
   /* ══════════════════════════════════════════════════════════
      AUTH
   ══════════════════════════════════════════════════════════ */
-  function showModal() { authOverlay.style.display = 'flex'; }
+  function showModal() { authOverlay.style.display = 'flex'; loginUser.focus(); }
   function hideModal() { authOverlay.style.display = 'none'; }
 
   function onLoggedIn(username) {
@@ -1157,7 +1157,7 @@
     hideModal();
     renderNav();
     openChatRoom();
-    connectWS();
+    reconnectWS(); // close any unauthed WS and reopen with the session cookie
   }
 
   function renderNav() {
@@ -1193,9 +1193,9 @@
 
     const { ok, data } = await apiPost('/api/login', { username: u, password: p });
     if (ok) {
-      currentUser = data.username; // use server's stored casing
+      currentUser = data.username;
       renderNav();
-      connectWS();
+      reconnectWS(); // fresh WS so server reads the new cookie
     } else {
       // Roll back
       currentUser = null; renderNav();
@@ -1266,14 +1266,13 @@
      CHECK SESSION ON LOAD
   ══════════════════════════════════════════════════════════ */
   async function checkSession() {
-    // Show modal instantly — don't make user wait for the network
-    showModal();
+    // Never block the page — silently restore session in background
     renderNav();
     try {
       const r = await fetch('/api/me');
       if (r.ok) {
         const { username } = await r.json();
-        onLoggedIn(username); // already logged in — hide modal silently
+        onLoggedIn(username);
       }
     } catch {}
   }
@@ -1290,8 +1289,15 @@
     return (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
   }
 
+  function reconnectWS() {
+    // Force a fresh connection so the server gets the new session cookie
+    if (ws) { ws.onclose = null; ws.close(); ws = null; }
+    clearTimeout(reconnectTimer);
+    connectWS();
+  }
+
   function connectWS() {
-    if (ws && ws.readyState <= WebSocket.OPEN) return;
+    if (ws && ws.readyState <= 1) return;
     clearTimeout(reconnectTimer);
     ws = new WebSocket(wsUrl());
 
