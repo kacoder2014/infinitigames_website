@@ -1184,24 +1184,53 @@
   // Login
   loginBtn.addEventListener('click', async () => {
     loginError.textContent = '';
-    loginBtn.disabled = true; loginBtn.textContent = 'Logging in…';
-    const { ok, data } = await apiPost('/api/login', { username: loginUser.value, password: loginPass.value });
-    loginBtn.disabled = false; loginBtn.textContent = 'Log In →';
-    if (!ok) { loginError.textContent = data.error; return; }
-    onLoggedIn(data.username);
+    const u = loginUser.value.trim(), p = loginPass.value;
+    if (!u || !p) { loginError.textContent = 'Fill in both fields.'; return; }
+
+    // Instant — show the site immediately, verify in background
+    currentUser = u;
+    hideModal(); renderNav(); openChatRoom();
+
+    const { ok, data } = await apiPost('/api/login', { username: u, password: p });
+    if (ok) {
+      currentUser = data.username; // use server's stored casing
+      renderNav();
+      connectWS();
+    } else {
+      // Roll back
+      currentUser = null; renderNav();
+      chatRoom.style.display = 'none'; chatGate.style.display = 'flex';
+      showModal(); loginError.textContent = data.error;
+    }
   });
-  loginPass.addEventListener('keydown', e => { if (e.key==='Enter') loginBtn.click(); });
+  loginPass.addEventListener('keydown', e => { if (e.key === 'Enter') loginBtn.click(); });
 
   // Register
   registerBtn.addEventListener('click', async () => {
     regError.textContent = '';
-    registerBtn.disabled = true; registerBtn.textContent = 'Creating…';
-    const { ok, data } = await apiPost('/api/register', { username: regUser.value, password: regPass.value });
-    registerBtn.disabled = false; registerBtn.textContent = 'Create Account →';
-    if (!ok) { regError.textContent = data.error; return; }
-    onLoggedIn(data.username);
+    const u = regUser.value.trim(), p = regPass.value;
+    if (!u) { regError.textContent = 'Enter a username.'; return; }
+    if (u.length < 3) { regError.textContent = 'Username must be at least 3 characters.'; return; }
+    if (!p || p.length < 4) { regError.textContent = 'Password must be at least 4 characters.'; return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(u)) { regError.textContent = 'Letters, numbers and _ only.'; return; }
+
+    // Instant — show the site immediately, verify in background
+    currentUser = u;
+    hideModal(); renderNav(); openChatRoom();
+
+    const { ok, data } = await apiPost('/api/register', { username: u, password: p });
+    if (ok) {
+      currentUser = data.username;
+      renderNav();
+      connectWS();
+    } else {
+      // Roll back
+      currentUser = null; renderNav();
+      chatRoom.style.display = 'none'; chatGate.style.display = 'flex';
+      showModal(); regError.textContent = data.error;
+    }
   });
-  regPass.addEventListener('keydown', e => { if (e.key==='Enter') registerBtn.click(); });
+  regPass.addEventListener('keydown', e => { if (e.key === 'Enter') registerBtn.click(); });
 
   // Tab switching
   tabLogin.addEventListener('click', () => {
