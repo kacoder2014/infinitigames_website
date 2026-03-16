@@ -172,9 +172,19 @@ wss.on('connection', (ws, req) => {
   ws.on('message', raw => {
     let msg; try { msg = JSON.parse(raw); } catch { return; }
     const client = clients.get(ws);
-    if (!client?.username) return;
+
+    // join: client sends username after logging in (WS may have opened before cookie was set)
+    if (msg.type === 'join') {
+      if (!client.username && msg.username) {
+        client.username = String(msg.username).trim().slice(0, 24);
+        ws.send(JSON.stringify({ type: 'joined', username: client.username, online: onlineCount() }));
+        broadcast({ type: 'system', text: `${client.username} joined the chat`, online: onlineCount() }, ws);
+      }
+      return;
+    }
 
     if (msg.type === 'message') {
+      if (!client?.username) return;
       const text = String(msg.text || '').trim().slice(0, 500);
       if (!text) return;
       broadcastAll({

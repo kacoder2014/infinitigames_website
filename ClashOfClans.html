@@ -2081,5 +2081,24 @@
       deployCard(draggedCard, x, y, "player");
     });
   </script>
+
+  <!-- InfinitiGames auto-login: skip login screen if already signed in -->
+  <script>
+  (async function () {
+    try {
+      const r = await fetch('/api/me');
+      if (!r.ok) return; // not logged in to InfinitiGames — show normal login
+      const { username } = await r.json();
+      // Create a local account if one doesn't exist yet
+      if (!accounts[username]) {
+        accounts[username] = defaultProfile(username, '__ig_sso__');
+        saveAccounts();
+      }
+      // Auto-login directly — no password prompt
+      currentUser = username;
+      loadHome();
+    } catch {}
+  })();
+  </script>
 </body>
 </html>

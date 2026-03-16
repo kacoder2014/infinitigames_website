@@ -1157,7 +1157,12 @@
     hideModal();
     renderNav();
     openChatRoom();
-    reconnectWS(); // close any unauthed WS and reopen with the session cookie
+    // If WS already open send join now, otherwise connectWS will send it on open
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'join', username }));
+    } else {
+      connectWS();
+    }
   }
 
   function renderNav() {
@@ -1195,7 +1200,11 @@
     if (ok) {
       currentUser = data.username;
       renderNav();
-      reconnectWS(); // fresh WS so server reads the new cookie
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'join', username: data.username }));
+      } else {
+        connectWS();
+      }
     } else {
       // Roll back
       currentUser = null; renderNav();
@@ -1289,19 +1298,16 @@
     return (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
   }
 
-  function reconnectWS() {
-    // Force a fresh connection so the server gets the new session cookie
-    if (ws) { ws.onclose = null; ws.close(); ws = null; }
-    clearTimeout(reconnectTimer);
-    connectWS();
-  }
-
   function connectWS() {
     if (ws && ws.readyState <= 1) return;
     clearTimeout(reconnectTimer);
     ws = new WebSocket(wsUrl());
 
-    ws.addEventListener('open', () => { chatStatus.textContent = ''; });
+    ws.addEventListener('open', () => {
+      chatStatus.textContent = '';
+      // Send join if already logged in (covers the pre-connect case)
+      if (currentUser) ws.send(JSON.stringify({ type: 'join', username: currentUser }));
+    });
 
     ws.addEventListener('message', e => {
       let d; try { d = JSON.parse(e.data); } catch { return; }
@@ -1355,7 +1361,8 @@
   msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
 
   /* ── Boot ── */
-  checkSession();
+  connectWS();     // pre-connect immediately so it's ready when user logs in
+  checkSession();  // silently restore session in background
 
 })();
 </script>

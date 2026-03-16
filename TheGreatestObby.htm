@@ -2733,5 +2733,36 @@ function loadLevel(idx) {
 <style>
     body { overflow: hidden !important; }
 </style>
+
+<!-- InfinitiGames auto-login: skip login modal if already signed in -->
+<script>
+(async function () {
+  try {
+    const r = await fetch('/api/me');
+    if (!r.ok) return; // not signed in to InfinitiGames — show normal login modal
+    const { username } = await r.json();
+    // Create local account if it doesn't exist
+    if (!localStorage.getItem('obbyAuth_' + username)) {
+      localStorage.setItem('obbyAuth_' + username, '__ig_sso__');
+    }
+    if (!localStorage.getItem('obbyUser_' + username)) {
+      localStorage.setItem('obbyUser_' + username, JSON.stringify({
+        easy: 0, hard: 0, veryhard: 0, coins: 0,
+        tempFly: false, permFly: false,
+        dailyQuestDate: '', dailyQuestProgress: 0,
+        weeklyQuestDate: '', weeklyQuestProgress: 0
+      }));
+    }
+    // Load progress and auto-login
+    const saved = localStorage.getItem('obbyUser_' + username);
+    if (saved) questProgress = { ...questProgress, ...JSON.parse(saved) };
+    currentUser = username;
+    hideAuthModal();
+    // Show logout button if present
+    const lb = document.getElementById('logoutBtn');
+    if (lb) lb.style.display = 'block';
+  } catch {}
+})();
+</script>
 </body>
 </html>
