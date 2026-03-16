@@ -1,0 +1,2737 @@
+<html lang="en">
+<head><!DOCTYPE html>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Obby with Coils</title>
+    <style>
+        body { margin: 0; overflow-y: auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #181c24; height: 100vh; }
+        #ui {
+            position: absolute; top: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(30,34,44,0.65);
+            border-radius: 22px;
+            padding: 28px 48px 20px 48px;
+            color: #fff;
+            box-shadow: 0 8px 32px #00eaff44, 0 1.5px 8px #0008;
+            min-width: 340px;
+            z-index: 10;
+            display: flex; flex-direction: column; align-items: center; pointer-events: none;
+            backdrop-filter: blur(8px) saturate(1.2);
+            border: 1.5px solid #00eaff33;
+        }
+        #levelDisp {
+            font-size: 2.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            letter-spacing: 1.2px;
+            transition: color 0.4s, transform 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #levelDisp:before {
+            content: '🏁';
+            font-size: 1.1em;
+            margin-right: 6px;
+        }
+        #stageIndicator {
+            position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+            background: rgba(35,39,58,0.92);
+            color: #fff;
+            font-size: 1.15em;
+            padding: 7px 22px;
+            border-radius: 14px;
+            box-shadow: 0 2px 12px #00eaff33, 0 2px 8px #0004;
+            z-index: 20;
+            letter-spacing: 0.7px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #stageIndicator:before {
+            content: '⭐';
+            font-size: 1.1em;
+        }
+        #powerupDisp {
+            font-size: 1.15em;
+            margin-bottom: 10px;
+            color: #00ff85;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #powerupDisp:before {
+            content: '⚡';
+            font-size: 1.1em;
+        }
+        #progressBar {
+            width: 240px;
+            height: 20px;
+            background: rgba(34,34,44,0.85);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 12px #00eaff33 inset, 0 2px 8px #0006 inset;
+            border: 1.5px solid #00eaff33;
+        }
+        #progressFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00eaff, #00ff85, #00eaff 80%);
+            border-radius: 12px 0 0 12px;
+            width: 0%;
+            transition: width 0.3s, background 0.5s;
+            box-shadow: 0 0 12px #00eaff88 inset;
+        }
+        #instructions {
+            position: absolute; bottom: 24px; width: 100%; text-align: center; color: #fff;
+            text-shadow: 1px 1px 2px #000; font-size: 1.15em; letter-spacing: 0.6px;
+            background: rgba(30,34,44,0.7);
+            border-radius: 12px;
+            padding: 8px 0;
+            box-shadow: 0 2px 8px #00eaff22;
+        }
+        #levelComplete, #gameComplete {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(30, 34, 44, 0.97); color: #fff; padding: 40px 60px; border-radius: 20px;
+            font-size: 2em; font-weight: bold; text-align: center; box-shadow: 0 8px 32px #000a; display: none; z-index: 20;
+        }
+        .btn {
+            margin-top: 24px; padding: 12px 32px; font-size: 1em; border: none; border-radius: 8px;
+            background: linear-gradient(90deg, #00eaff, #00ff85); color: #222; font-weight: bold; cursor: pointer;
+            box-shadow: 0 2px 8px #0004; transition: background 0.2s;
+        }
+        .btn:hover { background: linear-gradient(90deg, #00ff85, #00eaff); }
+
+        /* Responsive UI for mobile */
+        @media (max-width: 600px) {
+            #ui {
+                top: 10px;
+                min-width: 180px;
+                padding: 12px 8px 8px 8px;
+                font-size: 0.9em;
+            }
+            #levelDisp {
+                font-size: 1.2em;
+                margin-bottom: 4px;
+            }
+            #progressBar {
+                width: 120px;
+                height: 12px;
+                margin-bottom: 4px;
+            }
+            #powerupDisp {
+                font-size: 0.9em;
+                margin-bottom: 4px;
+            }
+            #stageIndicator {
+                font-size: 0.9em;
+                padding: 4px 10px;
+                top: 2px;
+            }
+            #instructions {
+                font-size: 0.9em;
+                bottom: 8px;
+            }
+            .btn {
+                padding: 8px 16px;
+                font-size: 0.9em;
+                margin-top: 12px;
+            }
+            #povToggle {
+                top: 60px;
+                right: 8px;
+            }
+            #difficultyModal > div {
+                padding: 16px 8px;
+                border-radius: 12px;
+            }
+        }
+    </style>
+</head>
+<body style="overflow:hidden;">
+                <button class="btn" id="logoutBtn" style="position:fixed;top:60px;right:24px;z-index:100;background:linear-gradient(90deg,#ff4444,#ffd700);color:#222;border-radius:12px;box-shadow:0 2px 8px #ffd70044;font-size:1.1em;padding:12px 32px;">Logout</button>
+                        // Show/hide logout button
+                        document.getElementById('logoutBtn').style.display = currentUser ? 'block' : 'none';
+            <!-- Leaderboard & User List Modal -->
+            <!-- Coin Balance UI -->
+            <div id="coinBalance" style="position:fixed;bottom:18px;left:18px;z-index:80;background:rgba(30,34,44,0.85);color:#ffd700;font-size:1.25em;padding:10px 22px;border-radius:16px;box-shadow:0 2px 8px #00eaff33;display:flex;align-items:center;gap:8px;font-weight:bold;">
+                <span style="font-size:1.3em;">💰</span> <span id="coinAmount">0</span> Coins
+            </div>
+            <!-- Main UI Buttons: Flex container for proper spacing -->
+            <div id="mainUIButtonRow" style="position:fixed;top:50%;right:32px;transform:translateY(-50%);z-index:80;display:flex;flex-direction:column;gap:22px;align-items:flex-end;">
+                <button class="btn" id="adminCmdsBtn" style="display:none;min-width:140px;">Admin Cmds</button>
+                <button class="btn" id="skipToLastBtn" style="display:none;min-width:140px;background:linear-gradient(90deg,#ff6b6b,#ffd700);color:#222;font-weight:bold;">Skip to Final</button>
+                <button class="btn" id="shopBtn" style="min-width:140px;">Shop</button>
+                <button class="btn" id="cosmeticShopBtn" style="display:none;min-width:140px;padding:12px 24px;border-radius:12px;background:linear-gradient(90deg,#00eaff,#00ff85);color:#222;font-weight:bold;font-size:1.1em;border:none;box-shadow:0 2px 8px #0004;">Cosmetics</button>
+            </div>
+            <!-- Shop Modal -->
+            <div id="shopModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:350;align-items:center;justify-content:center;flex-direction:column;">
+                <div style="background:linear-gradient(135deg,#23273a 80%,#ffd70022 100%);padding:44px 36px 32px 36px;border-radius:32px;box-shadow:0 12px 48px #ffd70055;text-align:center;min-width:320px;max-width:96vw;display:flex;flex-direction:column;align-items:center;gap:24px;backdrop-filter:blur(8px) saturate(1.2);">
+                    <div style="font-size:2.2em;font-weight:bold;color:#ffd700;margin-bottom:10px;display:flex;align-items:center;gap:14px;letter-spacing:1px;"><span style='font-size:1.3em;'>🛒</span> Shop</div>
+                    <div style="font-size:1.3em;color:#fff;margin-bottom:18px;">Spend your coins to buy powerups!</div>
+                    <div style="display:flex;flex-direction:column;gap:18px;width:100%;">
+                        <button class="btn" id="buySpeedCoilBtn" style="background:linear-gradient(90deg,#00eaff,#ffd700);color:#222;font-size:1.2em;">Buy Speed Coil (1000 coins)</button>
+                        <button class="btn" id="buyJumpCoilBtn" style="background:linear-gradient(90deg,#0000ff,#ffd700);color:#222;font-size:1.2em;">Buy Jump Coil (1000 coins)</button>
+                    </div>
+                    <div id="shopMsg" style="color:#ff8888;margin-top:8px;font-size:1.2em;"></div>
+                    <button class="btn" id="closeShopBtn" style="font-size:1.2em;padding:16px 40px;margin-top:10px;background:linear-gradient(90deg,#ffd700,#00eaff);color:#222;border-radius:12px;box-shadow:0 2px 8px #ffd70044;">Close</button>
+                </div>
+            </div>
+                <!-- Admin Commands Modal -->
+                <div id="adminCmdsModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:350;align-items:center;justify-content:center;flex-direction:column;">
+                    <div style="background:linear-gradient(135deg,#23273a 80%,#ffd70022 100%);padding:44px 36px 32px 36px;border-radius:32px;box-shadow:0 12px 48px #ffd70055;text-align:center;min-width:340px;max-width:96vw;display:flex;flex-direction:row;align-items:flex-start;gap:32px;backdrop-filter:blur(8px) saturate(1.2);">
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:18px;width:420px;">
+                            <div style="font-size:2.2em;font-weight:bold;color:#ffd700;margin-bottom:10px;display:flex;align-items:center;gap:14px;letter-spacing:1px;"><span style='font-size:1.3em;'>🛠️</span> Admin Commands</div>
+                            <div id="adminCmdsChat" style="width:420px;height:240px;background:linear-gradient(135deg,#23273a 80%,#ffd70011 100%);border-radius:18px;padding:18px 18px 18px 18px;box-shadow:0 2px 16px #ffd70055 inset;margin-bottom:8px;overflow-y:auto;color:#fff;text-align:left;font-size:1.18em;max-height:240px;overflow-y:auto;border:2px solid #ffd70044;"></div>
+                            <div style="display:flex;width:420px;gap:12px;margin-bottom:8px;">
+                                <input id="adminCmdInput" type="text" placeholder="Type a command..." style="flex:1;padding:16px;font-size:1.18em;border-radius:14px;border:none;background:#23273a;color:#ffd700;box-shadow:0 2px 8px #ffd70033;outline:none;transition:box-shadow 0.2s;">
+                                <button class="btn" id="sendAdminCmdBtn" style="font-size:1.18em;padding:16px 32px;background:linear-gradient(90deg,#ffd700,#00eaff);color:#222;border-radius:14px;box-shadow:0 2px 8px #ffd70044;">Send</button>
+                            </div>
+                            <button class="btn" id="closeAdminCmdsBtn" style="font-size:1.18em;padding:16px 32px;margin-top:6px;background:linear-gradient(90deg,#ffd700,#00eaff);color:#222;border-radius:14px;box-shadow:0 2px 8px #ffd70044;">Close</button>
+                        </div>
+                        <div id="adminCmdsExamples" style="color:#fff;font-size:1.13em;text-align:left;background:rgba(35,39,58,0.92);padding:18px 22px;border-radius:18px;box-shadow:0 2px 8px #ffd70022;min-width:260px;max-width:340px;">
+                            <b style="color:#ffd700">Examples:</b><br>
+                            <span style="color:#ffd700">givecoins 500</span> <span style="color:#00ff85">- Add 500 coins</span><br>
+                            <span style="color:#ffd700">setcoins 1000</span> <span style="color:#00ff85">- Set coins to 1000</span><br>
+                            <span style="color:#ffd700">givespeedcoil</span> <span style="color:#00ff85">- Grant Speed Coil</span><br>
+                            <span style="color:#ffd700">givejumpcoil</span> <span style="color:#00ff85">- Grant Jump Coil</span><br>
+                            <span style="color:#ffd700">removespeedcoil</span> <span style="color:#00ff85">- Remove Speed Coil</span><br>
+                            <span style="color:#ffd700">removejumpcoil</span> <span style="color:#00ff85">- Remove Jump Coil</span><br>
+                            <span style="color:#ffd700">resetprogress</span> <span style="color:#00ff85">- Reset quest progress</span><br>
+                            <span style="color:#ffd700">grantfly</span> <span style="color:#00ff85">- Grant flying powers</span><br>
+                            <span style="color:#ffd700">removefly</span> <span style="color:#00ff85">- Remove flying powers</span><br>
+                            <span style="color:#ffd700">completeallquests</span> <span style="color:#00ff85">- Complete all quests</span><br>
+                            <span style="color:#ffd700">id;username,command</span> <span style="color:#00ff85">- Target any user</span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn" id="adminCmdsBtn" style="display:none;position:fixed;bottom:18px;left:180px;z-index:80;">Admin Cmds</button>
+            <div id="leaderboardModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:260;align-items:center;justify-content:center;flex-direction:column;">
+                <div style="background:linear-gradient(135deg,#23273a 80%,#00eaff22 100%);padding:44px 36px 32px 36px;border-radius:32px;box-shadow:0 12px 48px #00eaff55;text-align:center;min-width:320px;max-width:96vw;display:flex;flex-direction:column;align-items:center;gap:24px;backdrop-filter:blur(8px) saturate(1.2);">
+                    <div style="font-size:2.2em;font-weight:bold;color:#00eaff;margin-bottom:10px;display:flex;align-items:center;gap:14px;letter-spacing:1px;"><span style='font-size:1.3em;'>🏅</span> Leaderboard</div>
+                    <div id="leaderboardList" style="width:100%;background:rgba(35,39,58,0.92);border-radius:18px;padding:18px 12px 12px 12px;box-shadow:0 2px 12px #00eaff33 inset;margin-bottom:8px;overflow-x:auto;"></div>
+                    <div style="font-size:2em;font-weight:bold;color:#00ff85;margin-bottom:10px;display:flex;align-items:center;gap:14px;letter-spacing:1px;"><span style='font-size:1.2em;'>👥</span> User List</div>
+                    <div id="userList" style="width:100%;background:rgba(35,39,58,0.92);border-radius:18px;padding:14px 12px 10px 12px;box-shadow:0 2px 12px #00ff8533 inset;margin-bottom:8px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;font-size:1.15em;"></div>
+                    <button class="btn" id="closeLeaderboardBtn" style="font-size:1.2em;padding:16px 40px;margin-top:10px;background:linear-gradient(90deg,#00eaff,#00ff85);color:#222;border-radius:12px;box-shadow:0 2px 8px #00eaff44;">Close</button>
+                </div>
+            </div>
+            <button class="btn" id="leaderboardBtn" style="position:fixed;top:10px;right:180px;z-index:60;">Leaderboard</button>
+        <!-- Login/Signup Modal -->
+        <div id="authModal" style="display:flex;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:300;align-items:center;justify-content:center;flex-direction:column;">
+            <div style="background:linear-gradient(135deg,#23273a 80%,#00eaff22 100%);padding:48px 48px 32px 48px;border-radius:28px;box-shadow:0 12px 48px #00eaff55;text-align:center;min-width:340px;max-width:90vw;display:flex;flex-direction:column;align-items:center;">
+                <div style="font-size:2em;font-weight:bold;color:#00eaff;margin-bottom:24px;display:flex;align-items:center;gap:12px;"><span style='font-size:1.2em;'>🔐</span> Sign In / Sign Up</div>
+                <div style="margin-bottom:18px;text-align:left;">
+                    <label for="usernameInput" style="color:#fff;font-size:1.2em;">Username</label><br>
+                    <input id="usernameInput" type="text" placeholder="Enter your username" style="margin-bottom:12px;width:260px;padding:12px;font-size:1.1em;border-radius:10px;border:none;background:#23273a;color:#fff;box-shadow:0 2px 8px #0004;">
+                </div>
+                <div style="margin-bottom:18px;text-align:left;">
+                    <label for="passwordInput" style="color:#fff;font-size:1.2em;">Password</label><br>
+                    <input id="passwordInput" type="password" placeholder="Enter your password" style="margin-bottom:12px;width:260px;padding:12px;font-size:1.1em;border-radius:10px;border:none;background:#23273a;color:#fff;box-shadow:0 2px 8px #0004;">
+                </div>
+                <div style="margin-bottom:18px;">
+                    <button class="btn" id="loginBtn" style="font-size:1.2em;padding:16px 40px;">Login</button>
+                    <button class="btn" id="createAccountBtn" style="font-size:1.2em;padding:16px 40px;margin-left:12px;">Create Account</button>
+                    <!-- Create Account Modal -->
+                    <div id="createAccountModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:301;align-items:center;justify-content:center;flex-direction:column;">
+                        <div style="background:#23273a;padding:48px 48px 32px 48px;border-radius:24px;box-shadow:0 12px 48px #000a;text-align:center;min-width:340px;max-width:90vw;">
+                            <div style="font-size:2em;font-weight:bold;color:#fff;margin-bottom:24px;">Create Account</div>
+                            <div style="margin-bottom:18px;text-align:left;">
+                                <label for="newUsernameInput" style="color:#fff;font-size:1.2em;">Username</label><br>
+                                <input id="newUsernameInput" type="text" placeholder="Choose a username" style="margin-bottom:12px;width:260px;padding:12px;font-size:1.1em;border-radius:10px;border:none;background:#23273a;color:#fff;box-shadow:0 2px 8px #0004;">
+                            </div>
+                            <div style="margin-bottom:18px;text-align:left;">
+                                <label for="newPasswordInput" style="color:#fff;font-size:1.2em;">Password</label><br>
+                                <input id="newPasswordInput" type="password" placeholder="Choose a password" style="margin-bottom:12px;width:260px;padding:12px;font-size:1.1em;border-radius:10px;border:none;background:#23273a;color:#fff;box-shadow:0 2px 8px #0004;">
+                            </div>
+                            <div style="margin-bottom:18px;">
+                                <button class="btn" id="submitCreateAccountBtn" style="font-size:1.2em;padding:16px 40px;">Create Account</button>
+                                <button class="btn" id="cancelCreateAccountBtn" style="font-size:1.2em;padding:16px 40px;margin-left:12px;">Cancel</button>
+                            </div>
+                            <div id="createAccountMsg" style="color:#ff8888;margin-top:8px;font-size:1.2em;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="authMsg" style="color:#ff8888;margin-top:8px;font-size:1.2em;"></div>
+            </div>
+        </div>
+        <!-- Quests Modal -->
+        <div id="questsModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:250;align-items:center;justify-content:center;flex-direction:column;">
+            <div style="background:linear-gradient(135deg,#23273a 80%,#00eaff22 100%);padding:48px 48px 32px 48px;border-radius:28px;box-shadow:0 12px 48px #00eaff55;text-align:center;min-width:340px;max-width:90vw;display:flex;flex-direction:column;align-items:center;">
+                <div style="font-size:2em;font-weight:bold;color:#00ff85;margin-bottom:24px;display:flex;align-items:center;gap:12px;"><span style='font-size:1.2em;'>🎯</span> Quests</div>
+                <div id="questList" style="color:#fff;text-align:left;font-size:1.25em;margin-bottom:24px;max-height:340px;overflow-y:auto;width:340px;padding-right:8px;">
+                </div>
+                <style>
+                .quest-progress-bar {
+                    width: 100%;
+                    height: 18px;
+                    background: #23273a;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    margin: 6px 0 14px 0;
+                    box-shadow: 0 2px 8px #00eaff33 inset;
+                    border: 1.2px solid #00eaff33;
+                }
+                .quest-progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, #00eaff, #00ff85, #00eaff 80%);
+                    border-radius: 10px 0 0 10px;
+                    width: 0%;
+                    transition: width 0.3s, background 0.5s;
+                    box-shadow: 0 0 8px #00eaff88 inset;
+                }
+                .quest-label {
+                    font-size: 1.1em;
+                    color: #00ff85;
+                    font-weight: 600;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .quest-label:before {
+                    content: '📝';
+                    font-size: 1.1em;
+                }
+                </style>
+                <button class="btn" id="closeQuestsBtn" style="font-size:1.2em;padding:16px 40px;">Close</button>
+            </div>
+        </div>
+        <button class="btn" id="questsBtn" style="position:absolute;top:10px;left:10px;z-index:60;">Quests</button>
+    <div id="povToggle" style="position:fixed;top:20px;right:24px;z-index:50;display:flex;flex-direction:column;gap:10px;align-items:flex-end;">
+        <button class="btn" id="settingsBtn" style="padding:8px 18px;font-size:1em;">Settings</button>
+    </div>
+    <div id="settingsModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:200;align-items:center;justify-content:center;flex-direction:column;">
+        <div style="background:linear-gradient(135deg,#23273a 80%,#00eaff22 100%);padding:40px 36px 32px 36px;border-radius:28px;box-shadow:0 12px 48px #000b;text-align:center;min-width:260px;max-width:96vw;display:flex;flex-direction:row;align-items:flex-start;gap:32px;">
+            <div style="font-size:2em;font-weight:bold;color:#00eaff;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:12px;"><span style='font-size:1.2em;'>⚙️</span> Settings</div>
+            <div style="width:100%;background:#23273a;border-radius:14px;padding:18px 18px 10px 18px;box-shadow:0 2px 12px #0003;margin-bottom:8px;">
+                <div style="font-size:1.1em;color:#00ff85;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style='font-size:1.1em;'>🔍</span> Camera</div>
+                <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <label style="color:#fff;">Zoom</label>
+                    <input id="zoomSlider" type="range" min="50" max="150" value="100" style="width:120px;">
+                    <span id="zoomValue" style="color:#00eaff;font-weight:bold;">100%</span>
+                </div>
+                <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <label style="color:#fff;">Sensitivity</label>
+                    <input id="sensitivitySlider" type="range" min="1" max="10" value="4" style="width:120px;">
+                    <span id="sensitivityValue" style="color:#00eaff;font-weight:bold;">4</span>
+                </div>
+                <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <label style="color:#fff;">POV</label>
+                    <button class="btn" id="settingsPOVBtn" style="width:120px;">First Person</button>
+                </div>
+                <div style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <label style="color:#fff;">Camera Mode</label>
+                    <button class="btn" id="settingsCameraModeBtn" style="width:120px;">Fixed Camera</button>
+                </div>
+            </div>
+            <div style="width:100%;background:#23273a;border-radius:14px;padding:18px 18px 10px 18px;box-shadow:0 2px 12px #0003;margin-bottom:8px;">
+                <div style="font-size:1.1em;color:#00ff85;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style='font-size:1.1em;'>🎵</span> Audio</div>
+                <button class="btn" id="musicToggleBtn" style="width:180px;margin-bottom:8px;">Pause Music</button>
+            </div>
+            <div style="width:100%;background:#23273a;border-radius:14px;padding:18px 18px 10px 18px;box-shadow:0 2px 12px #0003;margin-bottom:8px;" id="swapControlsContainer">
+                <div style="font-size:1.1em;color:#00ff85;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span style='font-size:1.1em;'>🎮</span> Controls</div>
+                <button class="btn" id="swapControlsBtn" style="margin-top:8px;">CHANGE CONTROLS POSITION</button>
+            </div>
+            <button class="btn" id="closeSettingsBtn" style="margin-top:8px;width:120px;">Close</button>
+        </div>
+    </div>
+    <div id="difficultyModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(20,24,32,0.98);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div style="background:linear-gradient(135deg,#23273a 80%,#00eaff22 100%);padding:44px 60px 36px 60px;border-radius:28px;box-shadow:0 12px 48px #00eaff55;text-align:center;display:flex;flex-direction:column;align-items:center;">
+            <div style="font-size:2em;font-weight:bold;color:#00eaff;margin-bottom:24px;display:flex;align-items:center;gap:12px;"><span style='font-size:1.2em;'>🎮</span> Choose Your Obby Difficulty</div>
+            <button class="btn" style="margin:14px 0;width:240px;font-size:1.15em;display:flex;align-items:center;gap:10px;justify-content:center;" onclick="window.selectDifficulty('easy')">🟢 Easy Obby</button>
+            <button class="btn" style="margin:14px 0;width:240px;font-size:1.15em;display:flex;align-items:center;gap:10px;justify-content:center;" onclick="window.selectDifficulty('hard')">🟠 Hard Obby</button>
+            <button class="btn" style="margin:14px 0;width:240px;font-size:1.15em;display:flex;align-items:center;gap:10px;justify-content:center;" onclick="window.selectDifficulty('veryhard')">🔴 Very Hard Obby</button>
+        </div>
+    </div>
+    <div id="stageIndicator">Stage 1 / 4</div>
+    <div id="ui">
+        <div id="levelDisp">Level: 1</div>
+        <div id="progressBar"><div id="progressFill"></div></div>
+        <div id="powerupDisp">Powerups: None</div>
+    </div>
+    <div id="levelComplete">Level Complete!<br><button class="btn" id="nextLevelBtn">Next Level</button></div>
+    <div id="gameComplete" style="background:linear-gradient(135deg,#23273a 80%,#00eaff22 100%);padding:48px 48px 32px 48px;border-radius:28px;box-shadow:0 12px 48px #00eaff55;text-align:center;min-width:340px;max-width:90vw;display:flex;flex-direction:column;align-items:center;">
+        <div style="font-size:2em;font-weight:bold;color:#00ff85;margin-bottom:18px;display:flex;align-items:center;gap:12px;"><span style='font-size:1.2em;'>🏆</span> Congratulations!</div>
+        <div style="color:#fff;font-size:1.3em;margin-bottom:18px;">You finished all levels!</div>
+        <button class="btn" id="restartBtn">Restart</button>
+    </div>
+    <div id="instructions">WASD: Move | Space: Jump | Collect Coils for Buffs!</div>
+    <audio id="bgMusic" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop autoplay></audio>
+    
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+            // --- Leaderboard & User List Logic ---
+            function showLeaderboardModal() {
+                updateLeaderboard();
+                document.getElementById('leaderboardModal').style.display = 'flex';
+            }
+            function hideLeaderboardModal() {
+                document.getElementById('leaderboardModal').style.display = 'none';
+            }
+            document.getElementById('leaderboardBtn').onclick = showLeaderboardModal;
+            document.getElementById('closeLeaderboardBtn').onclick = hideLeaderboardModal;
+            function updateLeaderboard() {
+                // Gather all users from localStorage
+                let users = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('obbyUser_')) {
+                        const username = key.replace('obbyUser_', '');
+                        const progress = JSON.parse(localStorage.getItem(key));
+                        let easy = typeof progress.easy === 'number' ? Math.min(progress.easy, 99) : 0;
+                        let hard = typeof progress.hard === 'number' ? Math.min(progress.hard, 99) : 0;
+                        let veryhard = typeof progress.veryhard === 'number' ? Math.min(progress.veryhard, 99) : 0;
+                        let total = easy + hard + veryhard;
+                        let coins = typeof progress.coins === 'number' ? progress.coins : 0;
+                        users.push({ username, total, easy, hard, veryhard, coins });
+                    }
+                }
+                // Sort by total completions
+                users.sort((a,b) => b.total - a.total);
+                // Build leaderboard HTML
+                let html = '<div style="max-height:320px;overflow-y:auto;" id="leaderboardScroll"><table style="width:100%;color:#fff;font-size:1.1em;border-collapse:separate;border-spacing:0 6px;">';
+                html += '<tr style="color:#00eaff;font-weight:bold;background:linear-gradient(90deg,#00eaff33,#00ff8533);"><td style="padding:6px 10px;border-radius:8px 0 0 8px;">#</td><td style="padding:6px 10px;">User</td><td style="padding:6px 10px;">Total</td><td style="padding:6px 10px;">Easy</td><td style="padding:6px 10px;">Hard</td><td style="padding:6px 10px;">Very Hard</td><td style="padding:6px 10px;border-radius:0 8px 8px 0;">Coins</td></tr>';
+                users.forEach((u, idx) => {
+                    html += `<tr style="background:${idx===0?'linear-gradient(90deg,#00eaff44,#00ff8544)':'rgba(35,39,58,0.92)'};box-shadow:0 2px 8px #00eaff22 inset;"><td style="padding:6px 10px;border-radius:8px 0 0 8px;font-weight:bold;color:#00ff85;">${idx+1}</td><td style="padding:6px 10px;color:#00eaff;font-weight:bold;">${u.username}</td><td style="padding:6px 10px;font-weight:bold;">${u.total}</td><td style="padding:6px 10px;">${u.easy}</td><td style="padding:6px 10px;">${u.hard}</td><td style="padding:6px 10px;">${u.veryhard}</td><td style="padding:6px 10px;border-radius:0 8px 8px 0;color:#ffd700;font-weight:bold;">${u.coins}</td></tr>`;
+                });
+                html += '</table></div>';
+                document.getElementById('leaderboardList').innerHTML = html;
+                // User list
+                let userHtml = users.map(u => `<span style='background:linear-gradient(90deg,#00eaff33,#00ff8533);padding:6px 16px;border-radius:12px;color:#00eaff;font-weight:bold;margin:2px;'>${u.username}</span>`).join(' ');
+                document.getElementById('userList').innerHTML = userHtml || '<i style="color:#fff;">No users found</i>';
+            }
+        // --- Admin Account Setup ---
+        function setupAdminAccount() {
+            const adminUser = 'admin';
+            const adminPass = 'xyz123';
+            const adminAuthKey = 'obbyAuth_' + adminUser;
+            const adminProgressKey = 'obbyUser_' + adminUser;
+            if (!localStorage.getItem(adminAuthKey)) {
+                // Store hashed password
+                localStorage.setItem(adminAuthKey, hash(adminPass));
+            }
+            // Always set admin progress to full features
+            localStorage.setItem(adminProgressKey, JSON.stringify({
+                easy: 100,
+                hard: 100,
+                veryhard: 100,
+                tempFly: true,
+                permFly: true,
+                jumpCoil: true,
+                speedCoil: true
+            }));
+        }
+        setupAdminAccount();
+        // --- Create Account Modal Logic ---
+        const createAccountBtn = document.getElementById('createAccountBtn');
+        const createAccountModal = document.getElementById('createAccountModal');
+        const newUsernameInput = document.getElementById('newUsernameInput');
+        const newPasswordInput = document.getElementById('newPasswordInput');
+        const submitCreateAccountBtn = document.getElementById('submitCreateAccountBtn');
+        const cancelCreateAccountBtn = document.getElementById('cancelCreateAccountBtn');
+        const createAccountMsg = document.getElementById('createAccountMsg');
+        createAccountBtn.onclick = function() {
+            createAccountModal.style.display = 'flex';
+        };
+        cancelCreateAccountBtn.onclick = function() {
+            createAccountModal.style.display = 'none';
+            createAccountMsg.innerText = '';
+        };
+        submitCreateAccountBtn.onclick = function() {
+            const u = newUsernameInput.value.trim();
+            const p = newPasswordInput.value;
+            if (!u || !p) { createAccountMsg.innerText = 'Enter username and password.'; return; }
+            if (localStorage.getItem('obbyAuth_' + u)) { createAccountMsg.innerText = 'User already exists.'; return; }
+            localStorage.setItem('obbyAuth_' + u, hash(p));
+            currentUser = u;
+            questProgress = {easy:0,hard:0,veryhard:0,tempCarpet:false,permCarpet:false};
+            saveUserProgress();
+            createAccountModal.style.display = 'none';
+            hideAuthModal();
+        };
+// --- Auth & Quest State ---
+let currentUser = null;
+let questProgress = {
+    easy: 0,
+    hard: 0,
+    veryhard: 0,
+    tempFly: false,
+    permFly: false,
+    coins: 0,
+    dailyQuestDate: '',
+    dailyQuestProgress: 0,
+    weeklyQuestDate: '',
+    weeklyQuestProgress: 0
+};
+let flyingActive = false;
+let flyMode = false;
+let flyTimer = 0;
+let flyJumpCount = 0;
+let lastJumpTime = 0;
+// --- Quest Coin Granting State ---
+let questCoinFlags = {
+    daily: false,
+    weekly: false
+};
+
+function checkAndGrantQuestCoins() {
+    // Daily quest: 2 completions for 50 coins
+    if (!questCoinFlags.daily && (questProgress.dailyQuestProgress||0) >= 2) {
+        questProgress.coins = (questProgress.coins||0) + 50;
+        questCoinFlags.daily = true;
+        saveUserProgress();
+        updateUI();
+    }
+    // Weekly quest: 10 completions for 200 coins
+    if (!questCoinFlags.weekly && (questProgress.weeklyQuestProgress||0) >= 10) {
+        questProgress.coins = (questProgress.coins||0) + 200;
+        questCoinFlags.weekly = true;
+        saveUserProgress();
+        updateUI();
+    }
+}
+// Flying powers: double spacebar toggles fly mode (Minecraft creative style)
+window.addEventListener('keydown', (e) => {
+    if ((questProgress.tempFly || questProgress.permFly) && e.code === 'Space') {
+        const now = Date.now();
+        if (now - lastJumpTime < 350) {
+            // Double spacebar detected
+            flyMode = !flyMode;
+            flyingActive = flyMode;
+            flyTimer = 0;
+            velocityY = 0;
+            gravity = flyMode ? 0 : 0.01;
+        }
+        lastJumpTime = now;
+    }
+});
+        function saveUserProgress() {
+            if (currentUser) {
+                // Always persist coins and coil powerups for all accounts
+                questProgress.coins = questProgress.coins || 0;
+                questProgress.jumpCoil = !!hasJumpCoil;
+                questProgress.speedCoil = !!hasSpeedCoil;
+                questProgress.tempCarpet = !!hasTempCarpet;
+                questProgress.permCarpet = !!hasPermCarpet;
+                localStorage.setItem('obbyUser_' + currentUser, JSON.stringify(questProgress));
+            }
+        }
+        function loadUserProgress() {
+            if (currentUser) {
+                const data = localStorage.getItem('obbyUser_' + currentUser);
+                if (data) {
+                    questProgress = JSON.parse(data);
+                } else {
+                    questProgress = {easy:0,hard:0,veryhard:0,tempFly:false,permFly:false,tempCarpet:false,permCarpet:false,coins:0,dailyQuestDate:'',dailyQuestProgress:0,weeklyQuestDate:'',weeklyQuestProgress:0};
+                }
+                // Always sync coil state from persistent progress
+                hasJumpCoil = !!questProgress.jumpCoil;
+                hasSpeedCoil = !!questProgress.speedCoil;
+                // Sync carpet state from persistent progress
+                hasTempCarpet = !!questProgress.tempCarpet;
+                hasPermCarpet = !!questProgress.permCarpet;
+            }
+        }
+        // Initialize yoursigmaguy with jump coil and magic carpet
+        (function() {
+            const userKey = 'obbyUser_yoursigmaguy';
+            let userData = localStorage.getItem(userKey);
+            if (userData) {
+                userData = JSON.parse(userData);
+            } else {
+                userData = {easy:0,hard:0,veryhard:0,tempFly:false,permFly:false,tempCarpet:false,permCarpet:false,coins:0,dailyQuestDate:'',dailyQuestProgress:0,weeklyQuestDate:'',weeklyQuestProgress:0};
+            }
+            userData.jumpCoil = true;
+            userData.tempCarpet = true;
+            userData.permCarpet = true;
+            localStorage.setItem(userKey, JSON.stringify(userData));
+        })();
+        // Initialize Yoursigmaguy with jump coil and magic carpet
+        (function() {
+            const userKey = 'obbyUser_Yoursigmaguy';
+            let userData = localStorage.getItem(userKey);
+            if (userData) {
+                userData = JSON.parse(userData);
+            } else {
+                userData = {easy:0,hard:0,veryhard:0,tempFly:false,permFly:false,tempCarpet:false,permCarpet:false,coins:0,dailyQuestDate:'',dailyQuestProgress:0,weeklyQuestDate:'',weeklyQuestProgress:0};
+            }
+            userData.jumpCoil = true;
+            userData.tempCarpet = true;
+            userData.permCarpet = true;
+            localStorage.setItem(userKey, JSON.stringify(userData));
+        })();
+function showAuthModal() {
+    document.getElementById('authModal').style.display = 'flex';
+}
+function hideAuthModal() {
+    document.getElementById('authModal').style.display = 'none';
+}
+function showQuestsModal() {
+    updateQuestList();
+    document.getElementById('questsModal').style.display = 'flex';
+}
+function hideQuestsModal() {
+    document.getElementById('questsModal').style.display = 'none';
+}
+function updateQuestList() {
+    const q = questProgress;
+    function progressBar(val, max, color) {
+        const pct = Math.min(100, Math.round((val/max)*100));
+        return `<div style="margin:6px 0 12px 0;">
+            <div style="font-size:1em;color:#fff;margin-bottom:4px;">${pct}%</div>
+            <div style="width:220px;height:18px;background:#222;border-radius:9px;overflow:hidden;box-shadow:0 2px 8px #0006 inset;">
+                <div style="height:100%;background:linear-gradient(90deg,${color},#00ff85);border-radius:9px 0 0 9px;width:${pct}%;transition:width 0.3s;"></div>
+            </div>
+        </div>`;
+    }
+    let html = '';
+    // Daily quest
+    const today = new Date().toISOString().slice(0,10);
+    if (!q.dailyQuestDate || q.dailyQuestDate !== today) {
+        q.dailyQuestDate = today;
+        q.dailyQuestProgress = 0;
+        saveUserProgress();
+            questCoinFlags.daily = false;
+    }
+    html += `<div style="font-size:1.2em;margin-bottom:12px;">🗓️ <b>Daily Quest:</b> Complete <b>2 obbies</b> today for <b>50 coins</b> <span style="color:${q.dailyQuestProgress>=2?'#00ff85':'#fff'}">${q.dailyQuestProgress>=2?'✓':''}</span></div>`;
+    html += progressBar(q.dailyQuestProgress||0, 2, '#00eaff');
+    // Weekly quest
+    const week = new Date();
+    week.setDate(week.getDate() - week.getDay());
+    const weekKey = week.toISOString().slice(0,10);
+    if (!q.weeklyQuestDate || q.weeklyQuestDate !== weekKey) {
+        q.weeklyQuestDate = weekKey;
+        q.weeklyQuestProgress = 0;
+        saveUserProgress();
+            questCoinFlags.weekly = false;
+    }
+    html += `<div style="font-size:1.2em;margin-bottom:12px;">📅 <b>Weekly Quest:</b> Complete <b>10 obbies</b> this week for <b>200 coins</b> <span style="color:${q.weeklyQuestProgress>=10?'#00ff85':'#fff'}">${q.weeklyQuestProgress>=10?'✓':''}</span></div>`;
+    html += progressBar(q.weeklyQuestProgress||0, 10, '#ff8800');
+    // Classic quests
+    html += `<div style="font-size:1.2em;margin-bottom:12px;">Complete <b>Easy Obby 5 times</b> and <b>Hard Obby 3 times</b> for <b>Temporary Flying Powers</b> <span style="color:${q.tempFly?'#00ff85':'#fff'}">${q.tempFly?'✓':''}</span></div>`;
+    html += progressBar(q.easy, 5, '#00eaff');
+    html += progressBar(q.hard, 3, '#ff8800');
+    html += `<div style="font-size:1.2em;margin-bottom:12px;">Complete <b>Easy Obby 10 times</b>, <b>Hard Obby 7 times</b>, <b>Very Hard Obby 5 times</b> for <b>Permanent Flying Powers</b> <span style="color:${q.permFly?'#00ff85':'#fff'}">${q.permFly?'✓':''}</span></div>`;
+    html += progressBar(q.easy, 10, '#00eaff');
+    html += progressBar(q.hard, 7, '#ff8800');
+    html += progressBar(q.veryhard, 5, '#ff00ff');
+    html += `<div style="margin-top:16px;font-size:1.1em;">Easy completions: <b>${q.easy}</b> | Hard completions: <b>${q.hard}</b> | Very Hard completions: <b>${q.veryhard}</b></div>`;
+    // Show coins
+    html += `<div style="margin-top:12px;font-size:1.2em;color:#ffd700;">💰 Coins: <b>${q.coins||0}</b></div>`;
+    document.getElementById('questList').innerHTML = html;
+}
+// --- Camera Settings State ---
+let cameraMode = 'open'; // 'open' or 'fixed'
+let cameraZoom = 1.0; // 1.0 = 100%
+let cameraSensitivity = 4; // default
+
+// --- Ball Obstacle State ---
+const balls = [];
+function createBall(x, y, z, radius = 1, speed = 0.12, dir = 'z') {
+    const ball = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0x880000 })
+    );
+    ball.position.set(x, y, z);
+    ball.userData = { speed, dir, start: {x, y, z}, radius };
+    scene.add(ball);
+    balls.push(ball);
+}
+
+// --- Moving Platform Obstacle ---
+const movingPlatforms = [];
+function createMovingPlatform(x, y, z, w, d, color, axis = 'x', range = 6, speed = 0.08) {
+    const plat = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), new THREE.MeshStandardMaterial({ color }));
+    plat.position.set(x, y, z);
+    plat.userData = { axis, range, speed, start: {x, y, z} };
+    scene.add(plat);
+    movingPlatforms.push(plat);
+    platforms.push(plat);
+    return plat;
+}
+
+// --- Spinning Platform Obstacle ---
+const spinningPlatforms = [];
+function createSpinningPlatform(x, y, z, w, d, color, speed = 0.05) {
+    const plat = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), new THREE.MeshStandardMaterial({ color }));
+    plat.position.set(x, y, z);
+    plat.userData = { speed };
+    scene.add(plat);
+    spinningPlatforms.push(plat);
+    platforms.push(plat);
+    return plat;
+}
+
+// --- Laser Obstacle ---
+const lasers = [];
+function createLaser(x, y, z, length = 6, axis = 'x', color = 0xff0000, speed = 0.1) {
+    const laser = new THREE.Mesh(
+        axis === 'x' ? new THREE.BoxGeometry(length, 0.2, 0.2) : new THREE.BoxGeometry(0.2, 0.2, length),
+        new THREE.MeshStandardMaterial({ color, emissive: color, transparent: true, opacity: 0.7 })
+    );
+    laser.position.set(x, y, z);
+    laser.userData = { axis, speed, start: {x, y, z}, length };
+    scene.add(laser);
+    lasers.push(laser);
+}
+
+// --- Disappearing Platform Obstacle ---
+const disappearingPlatforms = [];
+function createDisappearingPlatform(x, y, z, w, d, color = 0xff00ff, interval = 120) {
+    const plat = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), new THREE.MeshStandardMaterial({ color }));
+    plat.position.set(x, y, z);
+    plat.userData = { interval, timer: Math.floor(Math.random()*interval), visible: true };
+    scene.add(plat);
+    disappearingPlatforms.push(plat);
+    platforms.push(plat);
+    return plat;
+}
+                // --- Climbing and Swimming State ---
+                let climbing = false;
+                let swimming = false;
+                const climbables = [];
+                const waters = [];
+
+                function createLadder(x, y, z, h = 5) {
+                    // Roblox-style ladder: two vertical rails and horizontal rungs
+                    const railLeft = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.15, h, 0.15),
+                        new THREE.MeshStandardMaterial({ color: 0xffd700 })
+                    );
+                    railLeft.position.set(x - 0.4, y + h/2, z);
+                    scene.add(railLeft);
+                    climbables.push(railLeft);
+                    const railRight = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.15, h, 0.15),
+                        new THREE.MeshStandardMaterial({ color: 0xffd700 })
+                    );
+                    railRight.position.set(x + 0.4, y + h/2, z);
+                    scene.add(railRight);
+                    climbables.push(railRight);
+                    // Horizontal rungs
+                    const rungCount = Math.max(4, Math.floor(h * 2));
+                    for (let i = 0; i < rungCount; i++) {
+                        const rung = new THREE.Mesh(
+                            new THREE.BoxGeometry(0.7, 0.12, 0.12),
+                            new THREE.MeshStandardMaterial({ color: 0xffd700 })
+                        );
+                        rung.position.set(x, y + i * (h/(rungCount-1)), z);
+                        scene.add(rung);
+                        climbables.push(rung);
+                    }
+                }
+
+                function createWaterZone(x, y, z, w, d, h = 2) {
+                    const water = new THREE.Mesh(
+                        new THREE.BoxGeometry(w, h, d),
+                        new THREE.MeshStandardMaterial({ color: 0x3399ff, transparent: true, opacity: 0.5 })
+                    );
+                    water.position.set(x, y + h/2, z);
+                    water.userData = { type: 'water' };
+                    scene.add(water);
+                    waters.push(water);
+                }
+        // --- Camera Control State ---
+        let camYaw = 0; // horizontal angle in degrees
+        let camPitch = 15; // vertical angle in degrees (for third person)
+        let isDragging = false, lastX = 0, lastY = 0;
+
+        function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+
+        function setupCameraControls() {
+            if (!renderer || !renderer.domElement) return;
+            renderer.domElement.addEventListener('mousedown', e => {
+                if (cameraMode === 'fixed') return;
+                isDragging = true; lastX = e.clientX; lastY = e.clientY;
+            });
+            window.addEventListener('mouseup', e => { isDragging = false; });
+            window.addEventListener('mousemove', e => {
+                if (!isDragging || cameraMode === 'fixed') return;
+                let dx = e.clientX - lastX, dy = e.clientY - lastY;
+                camYaw -= dx * (cameraSensitivity/10);
+                camPitch = clamp(camPitch - dy * (cameraSensitivity/13), -40, 80);
+                lastX = e.clientX; lastY = e.clientY;
+            });
+            // Touch drag for camera
+            renderer.domElement.addEventListener('touchstart', e => {
+                if (cameraMode === 'fixed') return;
+                if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
+            });
+            window.addEventListener('touchend', e => { isDragging = false; });
+            window.addEventListener('touchmove', e => {
+                if (!isDragging || !e.touches.length || cameraMode === 'fixed') return;
+                let dx = e.touches[0].clientX - lastX, dy = e.touches[0].clientY - lastY;
+                camYaw -= dx * (cameraSensitivity/10);
+                camPitch = clamp(camPitch - dy * (cameraSensitivity/13), -40, 80);
+                lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+            });
+        }
+                // --- Difficulty State ---
+                let DIFFICULTY = null;
+
+                // Difficulty parameters
+                const DIFFICULTY_SETTINGS = {
+                    easy: {
+                        platformScale: 1.3,
+                        coilChance: 1,
+                        jumpRequired: false,
+                        speedRequired: false,
+                        label: 'Easy Obby'
+                    },
+                    hard: {
+                        platformScale: 1,
+                        coilChance: 1,
+                        jumpRequired: true,
+                        speedRequired: true,
+                        label: 'Hard Obby'
+                    },
+                    veryhard: {
+                        platformScale: 0.7,
+                        coilChance: 0.5,
+                        jumpRequired: true,
+                        speedRequired: true,
+                        label: 'Very Hard Obby'
+                    }
+                };
+
+
+                window.selectDifficulty = function(diff) {
+                    DIFFICULTY = diff;
+                    currentLevel = 0; // Always start at first level
+                    gameActive = true; // Ensure game is active
+                    document.getElementById('levelComplete').style.display = 'none';
+                    document.getElementById('gameComplete').style.display = 'none';
+                    document.getElementById('difficultyModal').style.display = 'none';
+                    startGameWithDifficulty();
+                }
+
+                function startGameWithDifficulty() {
+                                // ...existing code...
+                    setupThree();
+                    setupCameraControls();
+                    loadLevel(currentLevel);
+                    createTouchControls();
+                    const bgMusic = document.getElementById('bgMusic');
+                    bgMusic.volume = 0.5;
+                    bgMusic.muted = false;
+                    // Resume music if paused
+                    if (bgMusic.paused) {
+                        bgMusic.play().catch(() => {});
+                    }
+                    animate();
+                }
+        // --- UI Elements ---
+        const levelDisp = document.getElementById('levelDisp');
+        const powerupDisp = document.getElementById('powerupDisp');
+        const progressFill = document.getElementById('progressFill');
+        const levelComplete = document.getElementById('levelComplete');
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        const gameComplete = document.getElementById('gameComplete');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // --- Game Data ---
+        function getLevelsForDifficulty() {
+                        // Helper for checkerboard jumps
+                        function checkerboardPlatforms(startZ, count, y=0, w=2, d=2, dz=-4) {
+                            let arr = [];
+                            for (let i = 0; i < count; i++) {
+                                arr.push({x: (i%2===0?2:-2), y:y, z:startZ + dz*i, w:w, d:d, color: (i%2===0?0xff4444:0xffffff)});
+                            }
+                            return arr;
+                        }
+                        // Helper for kill bricks (red platforms that reset player)
+                        function killBricks(startZ, count, y=0, w=3, d=3, dz=-5) {
+                            let arr = [];
+                            for (let i = 0; i < count; i++) {
+                                arr.push({x:0, y:y, z:startZ + dz*i, w:w, d:d, color:0xff0000, kill:true});
+                            }
+                            return arr;
+                        }
+                        // Helper for conveyor belts (move player)
+                        function conveyorPlatforms(startZ, count, y=0, w=3, d=3, dz=-5, speed=0.15) {
+                            let arr = [];
+                            for (let i = 0; i < count; i++) {
+                                arr.push({x:0, y:y, z:startZ + dz*i, w:w, d:d, color:0x00ffcc, conveyor:speed*(i%2===0?1:-1)});
+                            }
+                            return arr;
+                        }
+                        // Helper for thin beams
+                        function thinBeams(startZ, count, y=0, dz=-4) {
+                            let arr = [];
+                            for (let i = 0; i < count; i++) {
+                                arr.push({x:0, y:y, z:startZ + dz*i, w:0.7, d:3, color:0xffff00});
+                            }
+                            return arr;
+                        }
+                        // Helper for wall jumps
+                        function wallJumps(startZ, count, y=0, dz=-4) {
+                            let arr = [];
+                            for (let i = 0; i < count; i++) {
+                                arr.push({x:(i%2===0?2:-2), y:y, z:startZ + dz*i, w:0.7, d:3, color:0x00aaff, wall:true});
+                            }
+                            return arr;
+                        }
+                        // Helper for spinners (rotating kill bars)
+                        function spinnerObstacles(startZ, count, y=1, dz=-6) {
+                            let arr = [];
+                            for (let i = 0; i < count; i++) {
+                                arr.push({x:0, y:y, z:startZ + dz*i, spinner:true, color:0xff00ff});
+                            }
+                            return arr;
+                        }
+            const s = DIFFICULTY_SETTINGS[DIFFICULTY||'easy'];
+            // Helper to generate a long sequence of platforms
+            function longPlatforms(startZ, count, y=0, w=3, d=3, color=0xeeeeee, dz=-10) {
+                let arr = [];
+                for (let i = 0; i < count; i++) {
+                    arr.push({x:0, y:y, z:startZ + dz*i, w:w*s.platformScale, d:d*s.platformScale, color:color});
+                }
+                return arr;
+            }
+            // Helper for colored platforms
+            function colorPlatforms(startZ, count, y=0, w=3, d=3, dz=-10) {
+                let arr = [];
+                const colors = [0xff4444,0x44ff44,0x4444ff,0xffe066,0xff66e0,0x66e0ff,0xe0ff66,0xffaaff,0x00ffcc,0xff8800];
+                for (let i = 0; i < count; i++) {
+                    arr.push({x:0, y:y, z:startZ + dz*i, w:w*s.platformScale, d:d*s.platformScale, color:colors[i%colors.length]});
+                }
+                return arr;
+            }
+            // Helper for zigzag platforms
+            function zigzagPlatforms(startZ, count, y=0, w=3, d=3, color=0xffaaff, dz=-10, dx=3) {
+                let arr = [];
+                for (let i = 0; i < count; i++) {
+                    arr.push({x:((i%2)*2-1)*dx, y:y, z:startZ + dz*i, w:w*s.platformScale, d:d*s.platformScale, color:color});
+                }
+                return arr;
+            }
+            // Helper for alternating heights
+            function altHeightPlatforms(startZ, count, w=3, d=3, color=0x00ffcc, dz=-10, h1=0, h2=4) {
+                let arr = [];
+                for (let i = 0; i < count; i++) {
+                    arr.push({x:0, y:i%2===0?h1:h2, z:startZ + dz*i, w:w*s.platformScale, d:d*s.platformScale, color:color});
+                }
+                return arr;
+            }
+            // Difficulty-based ladder placement
+            const easyLadder = {x:2, y:0, z:-10, h:3};
+            const hardLadder = {x:2, y:0, z:-10, h:5};
+            const veryHardLadders = [
+                {x:2, y:0, z:-10, h:6},
+                {x:-2, y:0, z:-18, h:7}
+            ];
+            return [
+                {
+                    name: 'Checkerboard Jumps',
+                    background: 0xf0e68c,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffffff},
+                        ...checkerboardPlatforms(-10, 6),
+                        ...longPlatforms(-34, 2, 0, 3, 3, 0xeeeeee),
+                    ],
+                    ladders: [{x:0, y:0, z:-40, h:3}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-48, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Zigzag Jumps',
+                    background: 0xffaaff,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffffff},
+                        ...zigzagPlatforms(-10, 6, 0, 3, 3, 0xffaaff),
+                        ...longPlatforms(-36, 2, 0, 3, 3, 0xeeeeee),
+                    ],
+                    ladders: [{x:0, y:0, z:-42, h:3}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-48, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Conveyor Chaos',
+                    background: 0x66e0ff,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffffff},
+                        ...conveyorPlatforms(-10, 4),
+                        ...longPlatforms(-30, 2, 0, 3, 3, 0xeeeeee),
+                    ],
+                    ladders: [{x:0, y:0, z:-36, h:3}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-40, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Thin Beams',
+                    background: 0xffe4b5,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffffff},
+                        ...thinBeams(-10, 6),
+                        ...longPlatforms(-34, 2, 0, 3, 3, 0xeeeeee),
+                    ],
+                    ladders: [{x:0, y:0, z:-40, h:3}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-48, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Wall Jumps',
+                    background: 0x00ffcc,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffffff},
+                        ...wallJumps(-10, 4),
+                        ...longPlatforms(-26, 2, 0, 3, 3, 0xeeeeee),
+                    ],
+                    ladders: [{x:0, y:0, z:-32, h:4}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-40, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Spinner Obstacles',
+                    background: 0xffaaff,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffffff},
+                        ...spinnerObstacles(-10, 3),
+                        ...longPlatforms(-20, 2, 0, 3, 3, 0xeeeeee),
+                    ],
+                    ladders: [{x:0, y:0, z:-26, h:3}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-32, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                // ...existing levels...
+                {
+                    name: 'Color Parade',
+                    background: 0x87ceeb,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale},
+                        ...colorPlatforms(-10, 20, 0, 3, 3),
+                        ...longPlatforms(-210, 10, 0, 3, 3, 0xffffff),
+                    ],
+                    ladders: [{x:0, y:0, z:-80, h:3}],
+                    coils: [],
+                    goal: {x:0, y:0, z:-240, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Moving Mayhem',
+                    background: 0x6a5acd,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffff00},
+                        ...longPlatforms(-10, 8, 0, 3, 3, 0xcccccc),
+                    ],
+                    ladders: [{x:0, y:0, z:-60, h:4}],
+                    coils: [{x:0, y:1.5, z:-20, type:'jump'}],
+                    moving: [
+                        {x:0, y:2, z:-30, w:2, d:2, color:0x00eaff, axis:'x', range:6, speed:0.08},
+                        {x:0, y:2, z:-50, w:2, d:2, color:0xff8800, axis:'z', range:8, speed:0.09}
+                    ],
+                    goal: {x:0, y:0, z:-80, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Spinning & Lasers',
+                    background: 0x1e90ff,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffe066},
+                        ...longPlatforms(-10, 8, 0, 3, 3, 0xcccccc),
+                    ],
+                    ladders: [{x:0, y:0, z:-60, h:4}],
+                    coils: [{x:0, y:1.5, z:-20, type:'speed'}],
+                    spinning: [
+                        {x:0, y:2, z:-30, w:2, d:2, color:0xff8800, speed:0.07},
+                        {x:0, y:2, z:-50, w:2, d:2, color:0x00eaff, speed:0.09}
+                    ],
+                    lasers: [
+                        {x:0, y:1.5, z:-40, length:8, axis:'z', color:0xff0000, speed:0.15}
+                    ],
+                    goal: {x:0, y:0, z:-80, w:5*s.platformScale, d:5*s.platformScale}
+                },
+                {
+                    name: 'Disappearing Platforms',
+                    background: 0xffe4b5,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xffaaff},
+                        ...longPlatforms(-10, 8, 0, 3, 3, 0xcccccc),
+                    ],
+                    ladders: [{x:0, y:0, z:-60, h:4}],
+                    coils: [{x:4, y:1.5, z:-20, type:'jump'}],
+                    disappearing: [
+                        {x:0, y:2, z:-30, w:2, d:2, color:0xff00ff, interval:80},
+                        {x:0, y:2, z:-50, w:2, d:2, color:0x00ffcc, interval:100}
+                    ],
+                    goal: {x:0, y:0, z:-80, w:5*s.platformScale, d:5*s.platformScale, color:0xffaaff}
+                },
+                {
+                    name: 'Zigzag Challenge',
+                    background: 0x00ffcc,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0x00ffcc},
+                        ...zigzagPlatforms(-10, 16, 0, 3, 3, 0xffaaff, -10, 4),
+                        ...longPlatforms(-170, 8, 0, 3, 3, 0xcccccc),
+                    ],
+                    ladders: [{x:0, y:0, z:-100, h:5}],
+                    coils: [{x:0, y:6, z:-60, type:'speed'}],
+                    goal: {x:0, y:6, z:-120, w:5*s.platformScale, d:5*s.platformScale, color:0x00ffcc}
+                },
+                {
+                    name: 'Height Alternator',
+                    background: 0x222222,
+                    platforms: [
+                        {x:0, y:0, z:0, w:5*s.platformScale, d:5*s.platformScale, color:0xff00ff},
+                        ...altHeightPlatforms(-10, 16, 3, 3, 0x00ffcc, -10, 0, 6),
+                        ...longPlatforms(-170, 8, 0, 3, 3, 0xcccccc),
+                    ],
+                    ladders: [{x:0, y:0, z:-100, h:5}],
+                    coils: [{x:0, y:6, z:-60, type:'speed'}],
+                    goal: {x:0, y:6, z:-120, w:5*s.platformScale, d:5*s.platformScale, color:0xffff00}
+                }
+            ];
+        }
+
+        let LEVELS = getLevelsForDifficulty();
+
+        let currentLevel = 0;
+        let playerSpeed, jumpStrength, velocityY, gravity;
+        let player, scene, camera, renderer, light;
+        let playerGroup = null;
+        let povMode = 'third'; // 'first' or 'third'
+        let platforms = [], coils = [];
+        let goalPlatform = null;
+        let gameActive = true;
+
+        function setupThree() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(5, 10, 7.5);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040));
+        }
+
+        // --- Powerup State ---
+        let hasJumpCoil = false;
+        let hasSpeedCoil = false;
+        let hasTempCarpet = false;
+        let hasPermCarpet = false;
+
+        function createRobloxAvatar() {
+            // Remove old group if exists
+            if (playerGroup) scene.remove(playerGroup);
+            playerGroup = new THREE.Group();
+            // Classic Roblox proportions with enhancements
+            // Torso (two-tone shirt)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(1, 1.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x00aaff, metalness: 0.15, roughness: 0.35 }));
+            torso.position.set(0, 0.7, 0);
+            playerGroup.add(torso);
+            // Shirt bottom (yellow stripe)
+            const shirtStripe = new THREE.Mesh(new THREE.BoxGeometry(1, 0.32, 0.51), new THREE.MeshStandardMaterial({ color: 0xffe600, metalness: 0.18, roughness: 0.3 }));
+            shirtStripe.position.set(0, 0.13, 0);
+            playerGroup.add(shirtStripe);
+            // Head (cube, subtle shine)
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.9), new THREE.MeshStandardMaterial({ color: 0xffe0a3, metalness: 0.18, roughness: 0.22 }));
+            head.position.set(0, 1.75, 0);
+            playerGroup.add(head);
+            // Face (single plane, only on front)
+            const faceCanvas = document.createElement('canvas');
+            faceCanvas.width = 64; faceCanvas.height = 64;
+            const ctx = faceCanvas.getContext('2d');
+            ctx.fillStyle = '#ffe0a3'; ctx.fillRect(0,0,64,64);
+            // Outline
+            ctx.strokeStyle = '#bba16a'; ctx.lineWidth = 4;
+            ctx.strokeRect(2,2,60,60);
+            // Eyes
+            ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(20, 32, 6, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(44, 32, 6, 0, Math.PI*2); ctx.fill();
+            // Smile
+            ctx.strokeStyle = '#222'; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(32, 40, 12, 0.15*Math.PI, 0.85*Math.PI);
+            ctx.stroke();
+            const faceTex = new THREE.CanvasTexture(faceCanvas);
+            const facePlane = new THREE.Mesh(
+                new THREE.PlaneGeometry(0.82, 0.82),
+                new THREE.MeshBasicMaterial({ map: faceTex, transparent: true })
+            );
+            // Attach face to the head, not playerGroup, and position on the front of the head
+            facePlane.position.set(0, 0, 0.46); // relative to head center, +Z is front
+            facePlane.rotation.y = 0; // ensure facing forward
+            head.add(facePlane);
+            // Blocky hat (red cap)
+            const hat = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.22, 0.92), new THREE.MeshStandardMaterial({ color: 0xd32f2f, metalness: 0.22, roughness: 0.18 }));
+            hat.position.set(0, 2.13, 0);
+            playerGroup.add(hat);
+            // Arms (boxy, two-tone)
+            const lArm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: 0x00aaff, metalness: 0.12, roughness: 0.35 }));
+            lArm.position.set(-0.7, 0.9, 0);
+            playerGroup.add(lArm);
+            const rArm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: 0x00aaff, metalness: 0.12, roughness: 0.35 }));
+            rArm.position.set(0.7, 0.9, 0);
+            playerGroup.add(rArm);
+            // Hands (skin color, boxy, small gap)
+            const lHand = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.25, 0.4), new THREE.MeshStandardMaterial({ color: 0xffe0a3, metalness: 0.1, roughness: 0.25 }));
+            lHand.position.set(-0.7, 0.22, 0);
+            playerGroup.add(lHand);
+            const rHand = lHand.clone();
+            rHand.position.x = 0.7;
+            playerGroup.add(rHand);
+            // Legs (boxy, two-tone pants)
+            const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.2, 0.45), new THREE.MeshStandardMaterial({ color: 0x2222ff, metalness: 0.13, roughness: 0.38 }));
+            lLeg.position.set(-0.25, -0.5, 0);
+            playerGroup.add(lLeg);
+            const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1.2, 0.45), new THREE.MeshStandardMaterial({ color: 0x2222ff, metalness: 0.13, roughness: 0.38 }));
+            rLeg.position.set(0.25, -0.5, 0);
+            playerGroup.add(rLeg);
+            // Pants bottom (darker blue stripe)
+            const lLegStripe = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.22, 0.45), new THREE.MeshStandardMaterial({ color: 0x111177, metalness: 0.13, roughness: 0.38 }));
+            lLegStripe.position.set(-0.25, -1.01, 0);
+            playerGroup.add(lLegStripe);
+            const rLegStripe = lLegStripe.clone();
+            rLegStripe.position.x = 0.25;
+            playerGroup.add(rLegStripe);
+            // Feet (shoes, boxy, small gap)
+            const lFoot = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.45), new THREE.MeshStandardMaterial({ color: 0x4444aa, metalness: 0.18, roughness: 0.22 }));
+            lFoot.position.set(-0.25, -1.18, 0);
+            playerGroup.add(lFoot);
+            const rFoot = lFoot.clone();
+            rFoot.position.x = 0.25;
+            playerGroup.add(rFoot);
+            // Neck (small box)
+            const neck = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.18, 0.3), new THREE.MeshStandardMaterial({ color: 0xffe0a3, metalness: 0.1, roughness: 0.22 }));
+            neck.position.set(0, 1.3, 0);
+            playerGroup.add(neck);
+            // Store references for animation
+            playerGroup.userData = { torso, head, lArm, rArm, lLeg, rLeg };
+            scene.add(playerGroup);
+            // Apply equipped cosmetics after avatar is created
+            if (typeof window.applyEquippedCosmetics === 'function') window.applyEquippedCosmetics();
+            return playerGroup;
+        }
+
+        function resetPlayer(keepPowerups = true) {
+            flyingActive = false;
+            flyMode = false;
+            flyTimer = 0;
+            flyJumpCount = 0;
+            lastJumpTime = 0;
+            // Ensure admin always has flying powers
+            if (currentUser === 'admin') {
+                questProgress.tempFly = true;
+                questProgress.permFly = true;
+            }
+            // Always sync coil state from persistent progress (permanent until admin removes)
+            hasJumpCoil = !!questProgress.jumpCoil;
+            hasSpeedCoil = !!questProgress.speedCoil;
+            // Coils are now permanent, never clear on reset
+            playerSpeed = hasSpeedCoil ? 0.3 : 0.15;
+            jumpStrength = hasJumpCoil ? 0.35 : 0.2;
+            velocityY = 0;
+            gravity = 0.01;
+            if (!playerGroup) {
+                playerGroup = createRobloxAvatar();
+            }
+            playerGroup.position.set(0, 5, 0);
+            // Apply equipped cosmetics after reset
+            if (typeof window.applyEquippedCosmetics === 'function') window.applyEquippedCosmetics();
+        }
+
+function clearLevel() {
+    balls.forEach(b => scene.remove(b));
+    balls.length = 0;
+    if (typeof movingPlatforms !== 'undefined') {
+        movingPlatforms.forEach(p => scene.remove(p));
+        movingPlatforms.length = 0;
+    }
+    if (typeof spinningPlatforms !== 'undefined') {
+        spinningPlatforms.forEach(p => scene.remove(p));
+        spinningPlatforms.length = 0;
+    }
+    if (typeof lasers !== 'undefined') {
+        lasers.forEach(l => scene.remove(l));
+        lasers.length = 0;
+    }
+    if (typeof disappearingPlatforms !== 'undefined') {
+        disappearingPlatforms.forEach(p => scene.remove(p));
+        disappearingPlatforms.length = 0;
+    }
+    platforms.forEach(p => scene.remove(p));
+    coils.forEach(c => scene.remove(c));
+    climbables.forEach(c => scene.remove(c));
+    waters.forEach(w => scene.remove(w));
+    if (goalPlatform) scene.remove(goalPlatform);
+    platforms = [];
+    coils = [];
+    climbables.length = 0;
+    waters.length = 0;
+    goalPlatform = null;
+    // Do not clear coils here; they are permanent until removed by admin
+}
+
+        function createPlatform(x, y, z, w, d, color = 0xeeeeee) {
+            let matOptions = { color };
+            if (arguments[6] && arguments[6].kill) matOptions.emissive = 0xff0000;
+            if (arguments[6] && arguments[6].conveyor) matOptions.emissive = 0x00ffcc;
+            if (arguments[6] && arguments[6].thin) matOptions.color = 0xffff00;
+            if (arguments[6] && arguments[6].wall) matOptions.color = 0x00aaff;
+            const plat = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), new THREE.MeshStandardMaterial(matOptions));
+            plat.position.set(x, y, z);
+            plat.userData = arguments[6] ? { ...arguments[6] } : {};
+            scene.add(plat);
+            platforms.push(plat);
+            return plat;
+        }
+
+        function createCoil(x, y, z, type) {
+            const color = type === 'jump' ? 0x0000ff : 0xff0000;
+            const coil = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshStandardMaterial({ color, emissive: color }));
+            coil.position.set(x, y, z);
+            coil.userData = { type };
+            scene.add(coil);
+            coils.push(coil);
+        }
+
+function loadLevel(idx) {
+    clearLevel();
+    LEVELS = getLevelsForDifficulty();
+    const lvl = LEVELS[idx];
+    scene.background = new THREE.Color(lvl.background);
+    lvl.platforms.forEach(p => {
+        if (p.spinner) {
+            // Spinner obstacle: rotating bar
+            const bar = new THREE.Mesh(new THREE.BoxGeometry(6, 0.5, 0.5), new THREE.MeshStandardMaterial({ color: p.color || 0xff00ff }));
+            bar.position.set(p.x, p.y + 1, p.z);
+            bar.userData = { spinner: true, angle: 0 };
+            scene.add(bar);
+            platforms.push(bar);
+        } else if (p.wall) {
+            // Wall jump: vertical wall
+            const wall = new THREE.Mesh(new THREE.BoxGeometry(0.7, 4, 3), new THREE.MeshStandardMaterial({ color: 0x00aaff }));
+            wall.position.set(p.x, p.y + 2, p.z);
+            wall.userData = { wall: true };
+            scene.add(wall);
+            platforms.push(wall);
+        } else {
+            createPlatform(p.x, p.y, p.z, p.w || 2, p.d || 2, p.color || 0xeeeeee, p);
+        }
+    });
+    lvl.coils.forEach(c => createCoil(c.x, c.y, c.z, c.type));
+    // Place ladders for climbing
+    if (lvl.ladders) lvl.ladders.forEach(lad => {
+        createLadder(lad.x, lad.y, lad.z, lad.h);
+        // Add ladder rungs
+        const rungCount = Math.max(4, Math.floor(lad.h * 2));
+        for (let i = 0; i < rungCount; i++) {
+            createPlatform(lad.x, lad.y + i * (lad.h/(rungCount-1)), lad.z, 1.2, 0.15, 0xffd700);
+        }
+    });
+    // Place water zones for swimming (keep as before)
+    if (idx === 2) createWaterZone(0, 0, -25, 6, 12, 2); // Level 3: water zone
+    if (idx === 3) createWaterZone(0, 0, -28, 8, 8, 2); // Finale
+    // Place balls for obstacles
+    if (lvl.balls) lvl.balls.forEach(ball => createBall(ball.x, ball.y, ball.z, ball.radius, ball.speed, ball.dir));
+    // Add new obstacles for challenge
+    if (idx === 1) {
+        // Level 2: Moving platform
+        createMovingPlatform(0, 2, -15, 2, 2, 0x00eaff, 'x', 6, 0.08);
+        // Spinning platform
+        createSpinningPlatform(0, 2, -25, 2, 2, 0xff8800, 0.07);
+        // Laser
+        createLaser(0, 1.5, -20, 6, 'x', 0xff0000, 0.12);
+        // Disappearing platform
+        createDisappearingPlatform(0, 2, -35, 2, 2, 0xff00ff, 100);
+    }
+    if (idx === 2) {
+        // Level 3: More obstacles
+        createMovingPlatform(0, 2, -10, 2, 2, 0x00eaff, 'z', 8, 0.09);
+        createSpinningPlatform(0, 2, -30, 2, 2, 0xff8800, 0.09);
+        createLaser(0, 1.5, -15, 8, 'z', 0xff0000, 0.15);
+        createDisappearingPlatform(0, 2, -40, 2, 2, 0xff00ff, 80);
+    }
+    if (idx === 3) {
+        // Finale: All obstacles
+        createMovingPlatform(0, 2, -20, 2, 2, 0x00eaff, 'x', 10, 0.12);
+        createSpinningPlatform(0, 2, -50, 2, 2, 0xff8800, 0.12);
+        createLaser(0, 1.5, -35, 10, 'x', 0xff0000, 0.18);
+        createDisappearingPlatform(0, 2, -60, 2, 2, 0xff00ff, 60);
+    }
+    goalPlatform = createPlatform(lvl.goal.x, lvl.goal.y, lvl.goal.z, lvl.goal.w, lvl.goal.d, lvl.goal.color || 0x00ff00);
+    // Always sync coil state from persistent progress before resetting player
+    hasJumpCoil = !!questProgress.jumpCoil;
+    hasSpeedCoil = !!questProgress.speedCoil;
+    hasTempCarpet = !!questProgress.tempCarpet;
+    hasPermCarpet = !!questProgress.permCarpet;
+    resetPlayer(false); // Don't clear powerups on new level
+    updateUI();
+}
+
+        function updateUI() {
+            levelDisp.innerText = `Level: ${currentLevel+1} - ${LEVELS[currentLevel].name}`;
+            // Stage indicator
+            document.getElementById('stageIndicator').innerText = `Stage ${currentLevel+1} / ${LEVELS.length}`;
+            // Animate levelDisp on stage change
+            levelDisp.style.color = '#00eaff';
+            levelDisp.style.transform = 'scale(1.15)';
+            setTimeout(() => {
+                levelDisp.style.color = '#fff';
+                levelDisp.style.transform = 'scale(1)';
+            }, 400);
+            let powerups = [];
+            if (hasJumpCoil) powerups.push('Jump Coil');
+            if (hasSpeedCoil) powerups.push('Speed Coil');
+            powerupDisp.innerText = powerups.length ? `Powerups: ${powerups.join(' & ')} Active` : 'Powerups: None';
+            progressFill.style.width = `${Math.min(100, Math.max(0, getProgress()*100))}%`;
+            // Update coin balance UI
+            document.getElementById('coinAmount').innerText = questProgress.coins || 0;
+            // Cosmetic shop button logic
+            const adminCmdsBtn = document.getElementById('adminCmdsBtn');
+            const shopBtn = document.getElementById('shopBtn');
+            const cosmeticShopBtn = document.getElementById('cosmeticShopBtn');
+            const skipToLastBtn = document.getElementById('skipToLastBtn');
+            // Check admin status
+            let isAdmin = currentUser === 'admin' || localStorage.getItem('obbyAdmin_' + currentUser) === 'true';
+            if (isAdmin) {
+                adminCmdsBtn.style.display = 'block';
+                shopBtn.style.display = 'block';
+                cosmeticShopBtn.style.display = 'block';
+            } else {
+                adminCmdsBtn.style.display = 'none';
+                shopBtn.style.display = 'block';
+                cosmeticShopBtn.style.display = 'block';
+            }
+            // Check if user is Yoursigmaguy
+            if (currentUser === 'Yoursigmaguy') {
+                skipToLastBtn.style.display = 'block';
+            } else {
+                skipToLastBtn.style.display = 'none';
+            }
+        }
+        // --- Shop Modal Logic ---
+        const shopBtn = document.getElementById('shopBtn');
+        const shopModal = document.getElementById('shopModal');
+        const closeShopBtn = document.getElementById('closeShopBtn');
+        const buySpeedCoilBtn = document.getElementById('buySpeedCoilBtn');
+        const buyJumpCoilBtn = document.getElementById('buyJumpCoilBtn');
+        const shopMsg = document.getElementById('shopMsg');
+        const skipToLastBtn = document.getElementById('skipToLastBtn');
+
+        shopBtn.onclick = function() {
+            shopModal.style.display = 'flex';
+            shopMsg.innerText = '';
+        };
+        skipToLastBtn.onclick = function() {
+            currentLevel = LEVELS.length - 1;
+            gameActive = true;
+            loadLevel(currentLevel);
+            document.getElementById('levelComplete').style.display = 'none';
+            document.getElementById('gameComplete').style.display = 'none';
+        };
+        closeShopBtn.onclick = function() {
+            shopModal.style.display = 'none';
+        };
+        buySpeedCoilBtn.onclick = function() {
+            if (!currentUser) { shopMsg.innerText = 'Please log in first.'; return; }
+            if (questProgress.speedCoil) { shopMsg.innerText = 'You already have Speed Coil.'; return; }
+            if ((questProgress.coins||0) < 1000) { shopMsg.innerText = 'Not enough coins!'; return; }
+            questProgress.coins -= 1000;
+            questProgress.speedCoil = true;
+            hasSpeedCoil = true;
+            playerSpeed = 0.3;
+            saveUserProgress();
+            updateUI();
+            shopMsg.innerText = 'Speed Coil purchased!';
+        };
+        buyJumpCoilBtn.onclick = function() {
+            if (!currentUser) { shopMsg.innerText = 'Please log in first.'; return; }
+            if (questProgress.jumpCoil) { shopMsg.innerText = 'You already have Jump Coil.'; return; }
+            if ((questProgress.coins||0) < 1000) { shopMsg.innerText = 'Not enough coins!'; return; }
+            questProgress.coins -= 1000;
+            questProgress.jumpCoil = true;
+            hasJumpCoil = true;
+            jumpStrength = 0.35;
+            saveUserProgress();
+            updateUI();
+            shopMsg.innerText = 'Jump Coil purchased!';
+        };
+
+        // --- Cosmetic Shop Modal Logic ---
+        // Cosmetic Shop Modal Logic (attach after DOM loaded)
+        window.addEventListener('DOMContentLoaded', function() {
+            const cosmeticShopBtn = document.getElementById('cosmeticShopBtn');
+            const cosmeticShopModal = document.getElementById('cosmeticShopModal');
+            const closeCosmeticShopBtn = document.getElementById('closeCosmeticShopBtn');
+            const cosmeticShopMsg = document.getElementById('cosmeticShopMsg');
+            const cosmeticShopContent = document.getElementById('cosmeticShopContent');
+            const tabHats = document.getElementById('cosmeticTabHats');
+            const tabTrails = document.getElementById('cosmeticTabTrails');
+
+            // Cosmetic items data
+            const COSMETIC_ITEMS = {
+                trails: [
+                    { id: 'trail1', name: 'Rainbow Trail', price: 800 },
+                    { id: 'trail2', name: 'Fire Trail', price: 1500 },
+                    { id: 'trail3', name: 'Ocean Trail', price: 1200 },
+                    { id: 'trail4', name: 'Toxic Trail', price: 1200 },
+                    { id: 'trail5', name: 'Shadow Trail', price: 1000 }
+                ]
+            };
+            let currentTab = 'trails';
+
+            // Helper: get/set owned cosmetics and equipped
+            function getCosmeticProgress() {
+                if (!questProgress.cosmetics) {
+                    questProgress.cosmetics = { trails: [], equippedTrail: null };
+                }
+                // Remove hats if present in old data
+                if (questProgress.cosmetics.hats) delete questProgress.cosmetics.hats;
+                if (questProgress.cosmetics.equippedHat) delete questProgress.cosmetics.equippedHat;
+                return questProgress.cosmetics;
+            }
+
+            function saveCosmeticProgress() {
+                localStorage.setItem('obbyUser_' + currentUser, JSON.stringify(questProgress));
+            }
+
+            function renderCosmeticShop() {
+                const cosmeticData = getCosmeticProgress();
+                let items = COSMETIC_ITEMS.trails;
+                if (!items) return;
+                cosmeticShopContent.innerHTML = items.map(item => {
+                    const owned = cosmeticData.trails.includes(item.id);
+                    let actionBtn = '';
+                    if (!owned) {
+                        actionBtn = `<button class='btn' style='padding:4px 16px;font-size:0.95em;' data-id='${item.id}' data-action='buy'>Buy (${item.price} coins)</button>`;
+                    } else {
+                        const equipped = cosmeticData.equippedTrail === item.id;
+                        if (equipped) {
+                            actionBtn = `<button class='btn' style='padding:4px 16px;font-size:0.95em;background:#00ff85;color:#222;' data-id='${item.id}' data-action='unequip'>Equipped</button>`;
+                        } else {
+                            actionBtn = `<button class='btn' style='padding:4px 16px;font-size:0.95em;' data-id='${item.id}' data-action='equip'>Equip</button>`;
+                        }
+                    }
+                    return `<div style='display:flex;align-items:center;justify-content:space-between;width:260px;margin-bottom:10px;'>
+                        <span style='color:#fff;font-size:1.1em;'>${item.name}</span>
+                        ${actionBtn}
+                    </div>`;
+                }).join('');
+                // Attach handlers
+                items.forEach(item => {
+                    const buyBtn = cosmeticShopContent.querySelector(`button[data-id='${item.id}'][data-action='buy']`);
+                    if (buyBtn) {
+                        buyBtn.onclick = function() {
+                            if (!currentUser) { cosmeticShopMsg.innerText = 'Please log in first.'; return; }
+                            if ((questProgress.coins||0) < item.price) { cosmeticShopMsg.innerText = 'Not enough coins!'; return; }
+                            questProgress.coins -= item.price;
+                            cosmeticData.trails.push(item.id);
+                            saveCosmeticProgress();
+                            cosmeticShopMsg.innerText = `Purchased ${item.name}!`;
+                            updateUI();
+                            renderCosmeticShop();
+                        };
+                    }
+                    const equipBtn = cosmeticShopContent.querySelector(`button[data-id='${item.id}'][data-action='equip']`);
+                    if (equipBtn) {
+                        equipBtn.onclick = function() {
+                            cosmeticData.equippedTrail = item.id;
+                            saveCosmeticProgress();
+                            cosmeticShopMsg.innerText = `Equipped ${item.name}!`;
+                            updateUI();
+                            renderCosmeticShop();
+                        };
+                    }
+                    const unequipBtn = cosmeticShopContent.querySelector(`button[data-id='${item.id}'][data-action='unequip']`);
+                    if (unequipBtn) {
+                        unequipBtn.onclick = function() {
+                            cosmeticData.equippedTrail = null;
+                            saveCosmeticProgress();
+                            cosmeticShopMsg.innerText = `Unequipped ${item.name}.`;
+                            updateUI();
+                            if (typeof window.applyEquippedCosmetics === 'function') window.applyEquippedCosmetics();
+                            renderCosmeticShop();
+                        };
+                    }
+                });
+            }
+
+            if (cosmeticShopBtn && cosmeticShopModal && closeCosmeticShopBtn && cosmeticShopMsg && cosmeticShopContent && tabTrails) {
+                cosmeticShopBtn.onclick = function() {
+                    cosmeticShopModal.style.display = 'flex';
+                    cosmeticShopMsg.innerText = '';
+                    currentTab = 'trails';
+                    tabTrails.style.background = '#00eaff';
+                    tabTrails.style.color = '#222';
+                    renderCosmeticShop();
+                };
+                closeCosmeticShopBtn.onclick = function() {
+                    cosmeticShopModal.style.display = 'none';
+                };
+                tabTrails.onclick = function() {
+                    currentTab = 'trails';
+                    tabTrails.style.background = '#00eaff';
+                    tabTrails.style.color = '#222';
+                    renderCosmeticShop();
+                };
+                // Hide hats tab if present
+                if (tabHats) tabHats.style.display = 'none';
+            }
+        });
+            // --- Cosmetic Equip Logic (apply equipped cosmetics to avatar) ---
+            // --- Dynamic Trail System ---
+            window.applyEquippedCosmetics = function() {
+                if (!playerGroup || !playerGroup.userData) return;
+                const cosmeticData = questProgress && questProgress.cosmetics ? questProgress.cosmetics : { trails: [], equippedTrail: null };
+                // Remove all hats visuals (legacy)
+                if (playerGroup.userData.hatMesh) {
+                    scene.remove(playerGroup.userData.hatMesh);
+                    playerGroup.userData.hatMesh = null;
+                }
+                // Remove all trail segments
+                if (window.trailSegments && Array.isArray(window.trailSegments)) {
+                    window.trailSegments.forEach(seg => scene.remove(seg.mesh));
+                }
+                window.trailSegments = [];
+                // No hat logic, only trails
+            };
+            // No static trail mesh: handled by dynamic system
+
+            // Call applyEquippedCosmetics after avatar loads or cosmetics change
+            // --- Admin Cmds Modal Logic ---
+            const adminCmdsBtn = document.getElementById('adminCmdsBtn');
+            const adminCmdsModal = document.getElementById('adminCmdsModal');
+            const closeAdminCmdsBtn = document.getElementById('closeAdminCmdsBtn');
+            const adminCmdsChat = document.getElementById('adminCmdsChat');
+            const adminCmdInput = document.getElementById('adminCmdInput');
+            const sendAdminCmdBtn = document.getElementById('sendAdminCmdBtn');
+
+            let adminCmdsHistory = [];
+
+            function showAdminCmdsModal() {
+                adminCmdsModal.style.display = 'flex';
+                renderAdminCmdsChat();
+                adminCmdInput.value = '';
+            }
+            function hideAdminCmdsModal() {
+                adminCmdsModal.style.display = 'none';
+            }
+            adminCmdsBtn.onclick = showAdminCmdsModal;
+            closeAdminCmdsBtn.onclick = hideAdminCmdsModal;
+            sendAdminCmdBtn.onclick = handleAdminCmd;
+            adminCmdInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') handleAdminCmd();
+            });
+
+            function renderAdminCmdsChat() {
+                adminCmdsChat.innerHTML = adminCmdsHistory.map(msg => `<div>${msg}</div>`).join('');
+                adminCmdsChat.scrollTop = adminCmdsChat.scrollHeight;
+            }
+
+            function handleAdminCmd() {
+                const cmd = adminCmdInput.value.trim();
+                if (!cmd) return;
+                adminCmdsHistory.push(`<span style='color:#ffd700'>admin:</span> ${cmd}`);
+                let response = '';
+                // Support id;username,command format
+                let targetUser = currentUser;
+                let targetProgress = questProgress;
+                let isTargeted = false;
+                let actualCmd = cmd;
+                if (cmd.startsWith('id;')) {
+                    const parts = cmd.split(',');
+                    if (parts.length === 2) {
+                        const userPart = parts[0].slice(3).trim();
+                        const commandPart = parts[1].trim();
+                        if (localStorage.getItem('obbyUser_' + userPart)) {
+                            targetUser = userPart;
+                            targetProgress = JSON.parse(localStorage.getItem('obbyUser_' + userPart));
+                            isTargeted = true;
+                            actualCmd = commandPart;
+                        } else {
+                            response = `User '${userPart}' not found.`;
+                        }
+                    } else {
+                        response = 'Invalid id;username,command format.';
+                    }
+                }
+                if (!response) {
+                    // Use targetProgress and actualCmd for command execution
+                    if (actualCmd.startsWith('givecoins ')) {
+                        const amt = parseInt(actualCmd.split(' ')[1], 10);
+                        if (!isNaN(amt) && amt > 0) {
+                            targetProgress.coins = (targetProgress.coins||0) + amt;
+                            localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                            response = isTargeted ? `Gave ${amt} coins to ${targetUser}.` : `Gave ${amt} coins.`;
+                        } else {
+                            response = 'Invalid coin amount.';
+                        }
+                    } else if (actualCmd.startsWith('setcoins ')) {
+                        const amt = parseInt(actualCmd.split(' ')[1], 10);
+                        if (!isNaN(amt) && amt >= 0) {
+                            targetProgress.coins = amt;
+                            localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                            response = isTargeted ? `Set coins to ${amt} for ${targetUser}.` : `Set coins to ${amt}.`;
+                        } else {
+                            response = 'Invalid coin amount.';
+                        }
+                    } else if (actualCmd === 'givespeedcoil') {
+                        targetProgress.speedCoil = true;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        // If granting to current user, update powerup state immediately
+                        if (!isTargeted || targetUser === currentUser) {
+                            hasSpeedCoil = true;
+                            playerSpeed = 0.3;
+                        }
+                        response = isTargeted ? `Speed Coil granted to ${targetUser}.` : 'Speed Coil granted.';
+                    } else if (actualCmd === 'givejumpcoil') {
+                        targetProgress.jumpCoil = true;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        // If granting to current user, update powerup state immediately
+                        if (!isTargeted || targetUser === currentUser) {
+                            hasJumpCoil = true;
+                            jumpStrength = 0.35;
+                        }
+                        response = isTargeted ? `Jump Coil granted to ${targetUser}.` : 'Jump Coil granted.';
+                    } else if (actualCmd === 'removespeedcoil') {
+                        targetProgress.speedCoil = false;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        // If removing from current user, update powerup state immediately
+                        if (!isTargeted || targetUser === currentUser) {
+                            hasSpeedCoil = false;
+                            playerSpeed = 0.15;
+                        }
+                        response = isTargeted ? `Speed Coil removed from ${targetUser}.` : 'Speed Coil removed.';
+                    } else if (actualCmd === 'removejumpcoil') {
+                        targetProgress.jumpCoil = false;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        // If removing from current user, update powerup state immediately
+                        if (!isTargeted || targetUser === currentUser) {
+                            hasJumpCoil = false;
+                            jumpStrength = 0.2;
+                        }
+                        response = isTargeted ? `Jump Coil removed from ${targetUser}.` : 'Jump Coil removed.';
+                    } else if (actualCmd === 'resetprogress') {
+                        targetProgress.easy = 0;
+                        targetProgress.hard = 0;
+                        targetProgress.veryhard = 0;
+                        targetProgress.tempFly = false;
+                        targetProgress.permFly = false;
+                        targetProgress.coins = 0;
+                        targetProgress.jumpCoil = false;
+                        targetProgress.speedCoil = false;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        response = isTargeted ? `Quest progress reset for ${targetUser}.` : 'Quest progress reset.';
+                    } else if (actualCmd === 'completeallquests') {
+                        targetProgress.easy = 10;
+                        targetProgress.hard = 7;
+                        targetProgress.veryhard = 5;
+                        targetProgress.tempFly = true;
+                        targetProgress.permFly = true;
+                        targetProgress.dailyQuestProgress = 2;
+                        targetProgress.dailyQuestDate = new Date().toISOString().slice(0,10);
+                        targetProgress.weeklyQuestProgress = 10;
+                        const week = new Date();
+                        week.setDate(week.getDate() - week.getDay());
+                        targetProgress.weeklyQuestDate = week.toISOString().slice(0,10);
+                        targetProgress.coins = (targetProgress.coins||0) + 250;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        response = isTargeted ? `All quests completed for ${targetUser}.` : 'All quests completed.';
+                    } else if (actualCmd === 'grantfly') {
+                        targetProgress.tempFly = true;
+                        targetProgress.permFly = true;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        response = isTargeted ? `Flying powers granted to ${targetUser}.` : 'Flying powers granted.';
+                    } else if (actualCmd === 'removefly') {
+                        targetProgress.tempFly = false;
+                        targetProgress.permFly = false;
+                        localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                        response = isTargeted ? `Flying powers removed from ${targetUser}.` : 'Flying powers removed.';
+                    } else if (actualCmd === 'grantadmin') {
+                        if (isTargeted && targetUser !== 'admin') {
+                            localStorage.setItem('obbyAdmin_' + targetUser, 'true');
+                            response = `Admin commands granted to ${targetUser}.`;
+                        } else {
+                            response = 'Cannot grant admin to self or admin.';
+                        }
+                    } else if (actualCmd === 'removeadmin') {
+                        if (isTargeted && targetUser !== 'admin') {
+                            localStorage.removeItem('obbyAdmin_' + targetUser);
+                            response = `Admin commands removed from ${targetUser}.`;
+                        } else {
+                            response = 'Cannot remove admin from self or admin.';
+                        }
+                    } else if (actualCmd.startsWith('granttrail ')) {
+                        // Usage: granttrail trail1
+                        const trailId = actualCmd.split(' ')[1];
+                        if (!trailId) {
+                            response = 'Specify a trail id.';
+                        } else {
+                            if (!targetProgress.cosmetics) targetProgress.cosmetics = { trails: [], equippedTrail: null };
+                            if (!targetProgress.cosmetics.trails.includes(trailId)) {
+                                targetProgress.cosmetics.trails.push(trailId);
+                                localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                                response = isTargeted ? `Granted trail '${trailId}' to ${targetUser}.` : `Granted trail '${trailId}'.`;
+                            } else {
+                                response = 'Trail already owned.';
+                            }
+                        }
+                    } else if (actualCmd.startsWith('removetrail ')) {
+                        // Usage: removetrail trail1
+                        const trailId = actualCmd.split(' ')[1];
+                        if (!trailId) {
+                            response = 'Specify a trail id.';
+                        } else {
+                            if (targetProgress.cosmetics && targetProgress.cosmetics.trails) {
+                                const idx = targetProgress.cosmetics.trails.indexOf(trailId);
+                                if (idx !== -1) {
+                                    targetProgress.cosmetics.trails.splice(idx, 1);
+                                    if (targetProgress.cosmetics.equippedTrail === trailId) targetProgress.cosmetics.equippedTrail = null;
+                                    localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                                    response = isTargeted ? `Removed trail '${trailId}' from ${targetUser}.` : `Removed trail '${trailId}'.`;
+                                } else {
+                                    response = 'Trail not owned.';
+                                }
+                            } else {
+                                response = 'No trails to remove.';
+                            }
+                        }
+                    } else if (actualCmd === 'resetavatar') {
+                        // Reset avatar appearance to default (could be extended for more features)
+                        // For now, just unequip all trails
+                        if (targetProgress.cosmetics) {
+                            targetProgress.cosmetics.equippedTrail = null;
+                            localStorage.setItem('obbyUser_' + targetUser, JSON.stringify(targetProgress));
+                            response = isTargeted ? `Reset avatar for ${targetUser}.` : 'Reset avatar.';
+                        } else {
+                            response = 'No cosmetics to reset.';
+                        }
+                    } else {
+                        response = 'Unknown command.';
+                    }
+                }
+                adminCmdsHistory.push(`<span style='color:#00ff85'>system:</span> ${response}`);
+                renderAdminCmdsChat();
+                adminCmdInput.value = '';
+                updateUI();
+            }
+
+        function getProgress() {
+            // Progress: 0 at start, 1 at goal
+            const start = LEVELS[currentLevel].platforms[0];
+            const goal = LEVELS[currentLevel].goal;
+            const dz = goal.z - start.z;
+            const dy = goal.y - start.y;
+            const dzp = playerGroup.position.z - start.z;
+            const dyp = playerGroup.position.y - start.y;
+            let prog = 0.5 * (dz ? dzp/dz : 1) + 0.5 * (dy ? dyp/dy : 1);
+            return Math.max(0, Math.min(1, prog));
+        }
+
+        // --- Input ---
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            // Resume music if paused
+            const bgMusic = document.getElementById('bgMusic');
+            if (bgMusic && bgMusic.paused) {
+                bgMusic.play().catch(() => {});
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            // Resume music if paused
+            const bgMusic = document.getElementById('bgMusic');
+            if (bgMusic && bgMusic.paused) {
+                bgMusic.play().catch(() => {});
+            }
+        });
+
+        // --- Animation Loop ---
+        let touchDir = {x:0, z:0};
+        let jumpTouch = false;
+        function createTouchControls() {
+            if (!('ontouchstart' in window)) return;
+            const controls = document.createElement('div');
+            controls.id = 'touchControls';
+            controls.style.position = 'absolute';
+            controls.style.bottom = '40px';
+            controls.style.width = '100vw';
+            controls.style.zIndex = '30';
+            controls.style.pointerEvents = 'auto';
+            // Default: joystick left, jump right
+            controls.innerHTML = `
+                <div id="touchRow" style="display:flex;justify-content:space-between;align-items:center;width:100vw;padding:0 10px;">
+                    <div id="movePad" style="width:80px;height:80px;background:#2228;border-radius:50%;position:relative;touch-action:none;box-shadow:0 2px 8px #0004;">
+                        <div id="moveDot" style="width:40px;height:40px;background:#00eaff88;border-radius:50%;position:absolute;left:20px;top:20px;transition:left 0.2s, top 0.2s;"></div>
+                    </div>
+                    <button id="jumpBtn" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(90deg,#00eaff,#00ff85);border:none;font-size:1.5em;font-weight:bold;box-shadow:0 2px 8px #0004;transition:background 0.2s;">⭮</button>
+                </div>
+            `;
+            document.body.appendChild(controls);
+            // Logic to swap controls
+            window.swapControls = function() {
+                const touchRow = document.getElementById('touchRow');
+                const movePad = document.getElementById('movePad');
+                const jumpBtn = document.getElementById('jumpBtn');
+                // If joystick is left, move it right; if right, move it left
+                if (touchRow.firstChild === movePad) {
+                    touchRow.removeChild(movePad);
+                    touchRow.appendChild(movePad);
+                } else {
+                    touchRow.removeChild(movePad);
+                    touchRow.insertBefore(movePad, touchRow.firstChild);
+                }
+            };
+            // Move pad logic
+            const movePad = controls.querySelector('#movePad');
+            const moveDot = controls.querySelector('#moveDot');
+            let dragging = false;
+            movePad.addEventListener('touchstart', e => {
+                dragging = true;
+            });
+            movePad.addEventListener('touchend', e => {
+                dragging = false; touchDir = {x:0,z:0}; moveDot.style.left='20px';moveDot.style.top='20px';
+            });
+            movePad.addEventListener('touchmove', e => {
+                if (!dragging) return;
+                const rect = movePad.getBoundingClientRect();
+                const t = e.touches[0];
+                let dx = t.clientX - (rect.left + rect.width/2);
+                let dy = t.clientY - (rect.top + rect.height/2);
+                const dist = Math.sqrt(dx*dx+dy*dy);
+                if (dist > 30) { dx *= 30/dist; dy *= 30/dist; }
+                moveDot.style.left = `${20+dx}px`;
+                moveDot.style.top = `${20+dy}px`;
+                // Map to WASD
+                touchDir.x = Math.abs(dx) > 10 ? (dx>0?1:-1) : 0;
+                touchDir.z = Math.abs(dy) > 10 ? (dy>0?1:-1) : 0;
+            });
+            // Jump button
+            const jumpBtn = controls.querySelector('#jumpBtn');
+            jumpBtn.addEventListener('touchstart', e => {
+                jumpTouch = true;
+                jumpBtn.style.background = 'linear-gradient(90deg,#00ff85,#00eaff)';
+            });
+            jumpBtn.addEventListener('touchend', e => {
+                jumpTouch = false;
+                jumpBtn.style.background = 'linear-gradient(90deg,#00eaff,#00ff85)';
+            });
+        }
+
+        // --- Animation Loop ---
+        // --- Dynamic Trail System Variables ---
+        let lastTrailPos = null;
+        let trailCooldown = 0;
+        function getTrailColors(trailId) {
+            // Use darker colors for trails and add new ones
+            if (trailId === 'trail1') return [0x7a007a, 0x007a99, 0x007a4a]; // dark magenta, dark cyan, dark green
+            if (trailId === 'trail2') return [0x993300, 0xcc6600, 0xcc9900]; // dark orange/brown, dark orange, dark yellow
+            if (trailId === 'trail3') return [0x003366, 0x005577, 0x00aaff]; // ocean blues
+            if (trailId === 'trail4') return [0x224400, 0x66ff00, 0x99ff66]; // toxic green
+            if (trailId === 'trail5') return [0x222222, 0x444444, 0x888888]; // shadow/gray
+            return [0x444444];
+        }
+
+        function animate() {
+        // Flying powers logic
+        if (flyMode && (questProgress.tempFly || questProgress.permFly)) {
+            flyTimer++;
+            // WASD or arrow keys for movement
+            let moveZ = (keys['KeyW'] ? -1 : 0) + (keys['KeyS'] ? 1 : 0) + (keys['ArrowUp'] ? -1 : 0) + (keys['ArrowDown'] ? 1 : 0);
+            let moveX = (keys['KeyA'] ? -1 : 0) + (keys['KeyD'] ? 1 : 0) + (keys['ArrowLeft'] ? -1 : 0) + (keys['ArrowRight'] ? 1 : 0);
+            if (moveZ) playerGroup.position.z += 0.25 * moveZ;
+            if (moveX) playerGroup.position.x += 0.25 * moveX;
+            // Up/down
+            if (keys['Space']) playerGroup.position.y += 0.18;
+            if (keys['ShiftLeft'] || keys['ShiftRight']) playerGroup.position.y -= 0.18;
+            velocityY = 0;
+            gravity = 0;
+            // Limit flying duration for tempFly
+            if (questProgress.tempFly && !questProgress.permFly && flyTimer > 600) {
+                flyMode = false;
+                flyingActive = false;
+                gravity = 0.01;
+            }
+        } else {
+            gravity = 0.01;
+        }
+        // Remove any visible flying code (debug or stray)
+        const flyDebug = document.getElementById('flyDebug');
+        if (flyDebug) flyDebug.remove();
+    // Ball movement and collision
+    balls.forEach(ball => {
+        if (ball.userData.dir === 'z') {
+            ball.position.z += ball.userData.speed;
+            // Loop ball
+            if (ball.position.z > ball.userData.start.z + 30) ball.position.z = ball.userData.start.z;
+        } else if (ball.userData.dir === 'x') {
+            ball.position.x += ball.userData.speed;
+            if (ball.position.x > ball.userData.start.x + 30) ball.position.x = ball.userData.start.x;
+        }
+        // Collision with player
+        if (playerGroup.position.distanceTo(ball.position) < ball.userData.radius + 0.7) {
+            resetPlayer(true);
+        }
+    });
+
+    // Moving platforms
+    if (typeof movingPlatforms !== 'undefined') {
+        movingPlatforms.forEach(plat => {
+            const t = performance.now()/1000;
+            if (plat.userData.axis === 'x') {
+                plat.position.x = plat.userData.start.x + Math.sin(t*plat.userData.speed)*plat.userData.range;
+            } else {
+                plat.position.z = plat.userData.start.z + Math.sin(t*plat.userData.speed)*plat.userData.range;
+            }
+        });
+    }
+
+    // Spinning platforms
+    if (typeof spinningPlatforms !== 'undefined') {
+        spinningPlatforms.forEach(plat => {
+            plat.rotation.y += plat.userData.speed;
+        });
+    }
+    // Spinner obstacles (rotating kill bars)
+    platforms.forEach(plat => {
+        if (plat.userData && plat.userData.spinner) {
+            plat.userData.angle = (plat.userData.angle || 0) + 0.07;
+            plat.rotation.y = plat.userData.angle;
+        }
+    });
+
+    // Lasers
+    if (typeof lasers !== 'undefined') {
+        lasers.forEach(laser => {
+            if (laser.userData.axis === 'x') {
+                laser.position.x = laser.userData.start.x + Math.sin(performance.now()/700)*2;
+            } else {
+                laser.position.z = laser.userData.start.z + Math.sin(performance.now()/700)*2;
+            }
+            // Collision with player
+            const dist = laser.userData.axis === 'x' ? Math.abs(playerGroup.position.x - laser.position.x) : Math.abs(playerGroup.position.z - laser.position.z);
+            const within = laser.userData.axis === 'x' ? laser.userData.length/2 : laser.userData.length/2;
+            if (
+                Math.abs(playerGroup.position.y - laser.position.y) < 1.2 &&
+                dist < within &&
+                (laser.userData.axis === 'x' ? Math.abs(playerGroup.position.z - laser.position.z) < 0.5 : Math.abs(playerGroup.position.x - laser.position.x) < 0.5)
+            ) {
+                resetPlayer(true);
+            }
+        });
+    }
+
+    // Disappearing platforms
+    if (typeof disappearingPlatforms !== 'undefined') {
+        disappearingPlatforms.forEach(plat => {
+            plat.userData.timer = (plat.userData.timer+1)%plat.userData.interval;
+            if (plat.userData.timer < plat.userData.interval/2) {
+                plat.visible = true;
+            } else {
+                plat.visible = false;
+            }
+        });
+    }
+            requestAnimationFrame(animate);
+            if (!gameActive) return;
+
+            // Movement
+            let moveZ = (keys['KeyW'] ? -1 : 0) + (keys['KeyS'] ? 1 : 0) + (touchDir.z||0);
+            let moveX = (keys['KeyA'] ? -1 : 0) + (keys['KeyD'] ? 1 : 0) + (touchDir.x||0);
+            let isMoving = moveZ !== 0 || moveX !== 0;
+            if (moveZ) playerGroup.position.z += playerSpeed * moveZ;
+            if (moveX) playerGroup.position.x += playerSpeed * moveX;
+
+            // --- Dynamic Trail System ---
+            const cosmeticData = questProgress && questProgress.cosmetics ? questProgress.cosmetics : { hats: [], trails: [], equippedHat: null, equippedTrail: null };
+            if (!window.trailSegments) window.trailSegments = [];
+            if (cosmeticData.equippedTrail) {
+                // Only spawn trail if player is moving or flying
+                let spawnTrail = isMoving || (flyMode && (questProgress.tempFly || questProgress.permFly));
+                // Only spawn every few frames for performance
+                trailCooldown = (trailCooldown || 0) - 1;
+                if (spawnTrail && trailCooldown <= 0) {
+                    const pos = playerGroup.position.clone();
+                    // Only spawn if moved enough from last
+                    if (!lastTrailPos || pos.distanceTo(lastTrailPos) > 0.25) {
+                        const colors = getTrailColors(cosmeticData.equippedTrail);
+                        // For rainbow, spawn 3 segments; for fire, 3 segments with different colors
+                        for (let i = 0; i < colors.length; i++) {
+                            let mesh = new THREE.Mesh(
+                                new THREE.SphereGeometry(0.13, 10, 10),
+                                new THREE.MeshStandardMaterial({ color: colors[i], emissive: colors[i], transparent: true, opacity: 0.55 })
+                            );
+                            // Offset for rainbow
+                            mesh.position.copy(pos);
+                            mesh.position.x += -0.13 + i * 0.13;
+                            mesh.position.y += 0.5 + (cosmeticData.equippedTrail === 'trail2' ? i*0.05 : 0);
+                            mesh.position.z -= 0.7;
+                            scene.add(mesh);
+                            window.trailSegments.push({ mesh, life: 28 }); // ~0.5s at 60fps
+                        }
+                        lastTrailPos = pos.clone();
+                        trailCooldown = 2; // Lower = more frequent
+                    }
+                }
+            } else {
+                // No trail equipped: remove all segments
+                if (window.trailSegments.length > 0) {
+                    window.trailSegments.forEach(seg => scene.remove(seg.mesh));
+                    window.trailSegments = [];
+                }
+            }
+            // Update and fade trail segments
+            if (window.trailSegments.length > 0) {
+                for (let i = window.trailSegments.length - 1; i >= 0; i--) {
+                    const seg = window.trailSegments[i];
+                    seg.life--;
+                    if (seg.life <= 0) {
+                        scene.remove(seg.mesh);
+                        window.trailSegments.splice(i, 1);
+                    } else {
+                        seg.mesh.material.opacity = Math.max(0, seg.life / 28 * 0.55);
+                    }
+                }
+            }
+
+            // Physics
+            velocityY -= gravity;
+            playerGroup.position.y += velocityY;
+
+            // Lava / Fall reset
+            if (playerGroup.position.y < -5) {
+                resetPlayer(true); // Keep powerups on death
+            }
+
+            // Platform Collision
+            let onGround = false;
+            climbing = false;
+            swimming = false;
+            // Climbing check
+            climbables.forEach(ladder => {
+                if (Math.abs(playerGroup.position.x - ladder.position.x) < 0.7 &&
+                    Math.abs(playerGroup.position.z - ladder.position.z) < 0.7 &&
+                    Math.abs(playerGroup.position.y - ladder.position.y) < ladder.userData.height/2 + 1) {
+                    if (keys['KeyW'] || touchDir.z === -1) {
+                        climbing = true;
+                        velocityY = 0.12;
+                    }
+                }
+            });
+            // Swimming check
+            waters.forEach(water => {
+                if (Math.abs(playerGroup.position.x - water.position.x) < water.geometry.parameters.width/2 &&
+                    Math.abs(playerGroup.position.z - water.position.z) < water.geometry.parameters.depth/2 &&
+                    playerGroup.position.y > water.position.y - water.geometry.parameters.height/2 &&
+                    playerGroup.position.y < water.position.y + water.geometry.parameters.height/2) {
+                    swimming = true;
+                    velocityY *= 0.7;
+                    if (keys['Space'] || jumpTouch) velocityY = 0.08;
+                }
+            });
+            platforms.forEach(p => {
+                // Spinner collision (rotating bar)
+                if (p.userData && p.userData.spinner) {
+                    const dx = Math.abs(playerGroup.position.x - p.position.x);
+                    const dz = Math.abs(playerGroup.position.z - p.position.z);
+                    const dy = Math.abs(playerGroup.position.y - (p.position.y + 1));
+                    if (dy < 1.2 && dx < 3 && dz < 0.5) {
+                        resetPlayer(true);
+                    }
+                    return;
+                }
+                // Wall jump: treat as platform only if player is above base
+                if (p.userData && p.userData.wall) {
+                    if (
+                        Math.abs(playerGroup.position.x - p.position.x) < 0.7/2 + 0.5 &&
+                        Math.abs(playerGroup.position.z - p.position.z) < 3/2 + 0.5 &&
+                        playerGroup.position.y > p.position.y && playerGroup.position.y < p.position.y + 4
+                    ) {
+                        if (velocityY < 0) {
+                            velocityY = 0;
+                            playerGroup.position.y = p.position.y + 4.1;
+                        }
+                        onGround = true;
+                    }
+                    return;
+                }
+                // Kill brick
+                if (p.userData && p.userData.kill) {
+                    if (
+                        Math.abs(playerGroup.position.x - p.position.x) < (p.geometry.parameters.width/2 + 0.5) &&
+                        Math.abs(playerGroup.position.z - p.position.z) < (p.geometry.parameters.depth/2 + 0.5) &&
+                        playerGroup.position.y - p.position.y < 1.5 && playerGroup.position.y - p.position.y > 0
+                    ) {
+                        resetPlayer(true);
+                    }
+                    return;
+                }
+                // Conveyor belt
+                if (p.userData && p.userData.conveyor) {
+                    if (
+                        Math.abs(playerGroup.position.x - p.position.x) < (p.geometry.parameters.width/2 + 0.5) &&
+                        Math.abs(playerGroup.position.z - p.position.z) < (p.geometry.parameters.depth/2 + 0.5) &&
+                        playerGroup.position.y - p.position.y < 1.5 && playerGroup.position.y - p.position.y > 0
+                    ) {
+                        if (velocityY < 0) {
+                            velocityY = 0;
+                            playerGroup.position.y = p.position.y + 1.25;
+                        }
+                        playerGroup.position.x += p.userData.conveyor;
+                        onGround = true;
+                    }
+                    return;
+                }
+                // Thin beam (normal platform, but thin)
+                // Normal platform
+                if (
+                    Math.abs(playerGroup.position.x - p.position.x) < (p.geometry.parameters.width/2 + 0.5) &&
+                    Math.abs(playerGroup.position.z - p.position.z) < (p.geometry.parameters.depth/2 + 0.5) &&
+                    playerGroup.position.y - p.position.y < 1.5 && playerGroup.position.y - p.position.y > 0
+                ) {
+                    if (velocityY < 0) {
+                        velocityY = 0;
+                        playerGroup.position.y = p.position.y + 1.25;
+                        // Double jump for flying powers
+                        if ((questProgress.tempFly || questProgress.permFly)) {
+                            flyJumpCount = 0;
+                        } else if (!flyMode) {
+                            // Activate flying mode on second jump
+                            flyMode = true;
+                            flyingActive = true;
+                            flyTimer = 0;
+                        }
+                        if (keys['Space'] || jumpTouch) {
+                            if ((questProgress.tempFly || questProgress.permFly)) {
+                                if (flyJumpCount === 0) {
+                                    velocityY = jumpStrength;
+                                    flyJumpCount = 1;
+                                } else if (!flyMode) {
+                                    // Activate flying mode on second jump
+                                    flyMode = true;
+                                    flyingActive = true;
+                                    flyTimer = 0;
+                                }
+                            } else {
+                                velocityY = jumpStrength;
+                            }
+                        }
+                        onGround = true;
+                    }
+                }
+            });
+
+            // Coil Collection
+            coils.forEach((c, index) => {
+                c.rotation.y += 0.05;
+                if (playerGroup.position.distanceTo(c.position) < 1.5) {
+                    // Removed coil sound effect
+                    if (c.userData.type === 'jump') {
+                        hasJumpCoil = true;
+                        jumpStrength = 0.35;
+                    } else if (c.userData.type === 'speed') {
+                        hasSpeedCoil = true;
+                        playerSpeed = 0.3;
+                    }
+                    scene.remove(c);
+                    coils.splice(index, 1);
+                }
+            });
+
+            // Victory sound for level complete
+            // Removed victory sound effect
+
+    // --- Feedback: Animate stage indicator on level complete ---
+    if (!gameActive && (levelComplete.style.display === 'block' || gameComplete.style.display === 'block')) {
+        document.getElementById('stageIndicator').style.background = '#00ff85';
+        document.getElementById('stageIndicator').style.color = '#222';
+        setTimeout(() => {
+            document.getElementById('stageIndicator').style.background = '#23273a';
+            document.getElementById('stageIndicator').style.color = '#fff';
+        }, 700);
+    }
+    // --- Avatar Animation (Rthro-inspired & enhanced) ---
+    if (playerGroup && playerGroup.userData) {
+        const { lArm, rArm, lLeg, rLeg, torso, head } = playerGroup.userData;
+        const t = performance.now() / 300;
+        // Hide body parts except head in first person
+        if (povMode === 'first') {
+            torso.visible = false;
+            lArm.visible = false;
+            rArm.visible = false;
+            lLeg.visible = false;
+            rLeg.visible = false;
+            head.visible = true;
+        } else {
+            torso.visible = true;
+            lArm.visible = true;
+            rArm.visible = true;
+            lLeg.visible = true;
+            rLeg.visible = true;
+            head.visible = true;
+        }
+        // Victory animation
+        if (!gameActive && levelComplete.style.display === 'block') {
+            lArm.rotation.x = -1.2;
+            rArm.rotation.x = -1.2;
+            lLeg.rotation.x = 0.2;
+            rLeg.rotation.x = 0.2;
+            torso.rotation.z = Math.sin(t) * 0.2;
+            head.position.y = 1.85 + Math.abs(Math.sin(t))*0.1;
+        } else if (!gameActive && gameComplete.style.display === 'block') {
+            // Game complete: dance
+            lArm.rotation.x = Math.sin(t) * 1.5;
+            rArm.rotation.x = Math.cos(t) * 1.5;
+            lLeg.rotation.x = Math.cos(t) * 0.7;
+            rLeg.rotation.x = Math.sin(t) * 0.7;
+            torso.rotation.z = Math.sin(t) * 0.2;
+            head.position.y = 1.85 + Math.abs(Math.sin(t))*0.1;
+        } else if (playerGroup.position.y < -4) {
+            // Defeat animation (fall)
+            lArm.rotation.x = 2.5;
+            rArm.rotation.x = 2.5;
+            lLeg.rotation.x = -2.5;
+            rLeg.rotation.x = -2.5;
+            torso.rotation.z = Math.sin(t) * 0.3;
+            head.position.y = 1.65;
+        } else if (climbing) {
+            // Climbing animation (polished)
+            lArm.rotation.x = Math.sin(t) * 1.3;
+            rArm.rotation.x = -Math.sin(t) * 1.3;
+            lLeg.rotation.x = -Math.sin(t) * 1.3;
+            rLeg.rotation.x = Math.sin(t) * 1.3;
+            torso.rotation.z = Math.sin(t) * 0.12;
+            head.position.y = 1.75 + Math.abs(Math.sin(t))*0.03;
+        } else if (swimming) {
+            // Swimming animation (polished)
+            lArm.rotation.x = Math.sin(t) * 1.7;
+            rArm.rotation.x = -Math.sin(t) * 1.7;
+            lLeg.rotation.x = Math.sin(t) * 0.7;
+            rLeg.rotation.x = -Math.sin(t) * 0.7;
+            torso.rotation.z = Math.sin(t) * 0.07;
+            head.position.y = 1.75 + Math.abs(Math.sin(t))*0.04;
+        } else if (isMoving && onGround) {
+            // Walk animation
+            lArm.rotation.x = Math.sin(t) * 0.8;
+            rArm.rotation.x = -Math.sin(t) * 0.8;
+            lLeg.rotation.x = -Math.sin(t) * 0.8;
+            rLeg.rotation.x = Math.sin(t) * 0.8;
+            torso.rotation.z = 0;
+            head.position.y = 1.75 + Math.abs(Math.sin(t))*0.05;
+        } else if (!onGround) {
+            // Jump animation
+            lArm.rotation.x = 1.0;
+            rArm.rotation.x = 1.0;
+            lLeg.rotation.x = 0.4;
+            rLeg.rotation.x = 0.4;
+            torso.rotation.z = 0;
+            head.position.y = 1.75;
+        } else {
+            // Idle animation (subtle sway)
+            lArm.rotation.x = Math.sin(t*0.5)*0.1;
+            rArm.rotation.x = -Math.sin(t*0.5)*0.1;
+            lLeg.rotation.x = Math.sin(t*0.5)*0.05;
+            rLeg.rotation.x = -Math.sin(t*0.5)*0.05;
+            torso.rotation.z = Math.sin(t*0.5)*0.02;
+            head.position.y = 1.75;
+        }
+    }
+
+            // Goal Check
+            if (goalPlatform &&
+                Math.abs(playerGroup.position.x - goalPlatform.position.x) < (goalPlatform.geometry.parameters.width/2 + 0.5) &&
+                Math.abs(playerGroup.position.z - goalPlatform.position.z) < (goalPlatform.geometry.parameters.depth/2 + 0.5) &&
+                Math.abs(playerGroup.position.y - goalPlatform.position.y) < 2) {
+                // Level Complete
+                gameActive = false;
+                if (currentLevel < LEVELS.length-1) {
+                    levelComplete.style.display = 'block';
+                } else {
+                    gameComplete.style.display = 'block';
+                    // Only increment quest progress when the whole obby is completed
+                    if (currentUser) {
+                        if (DIFFICULTY === 'easy') questProgress.easy++;
+                        if (DIFFICULTY === 'hard') questProgress.hard++;
+                        if (DIFFICULTY === 'veryhard') questProgress.veryhard++;
+                        // Daily quest progress
+                        questProgress.dailyQuestProgress = (questProgress.dailyQuestProgress||0)+1;
+                        // Weekly quest progress
+                        questProgress.weeklyQuestProgress = (questProgress.weeklyQuestProgress||0)+1;
+                        // Check for temp fly
+                        if (questProgress.easy >= 5 && questProgress.hard >= 3 && !questProgress.tempFly) questProgress.tempFly = true;
+                        // Check for perm fly
+                        if (questProgress.easy >= 10 && questProgress.hard >= 7 && questProgress.veryhard >= 5 && !questProgress.permFly) questProgress.permFly = true;
+                            checkAndGrantQuestCoins();
+                        saveUserProgress();
+                    }
+                }
+            }
+
+            // Camera POV
+            if (povMode === 'third') {
+                // Orbit camera around player
+                const radYaw = camYaw * Math.PI/180;
+                const radPitch = camPitch * Math.PI/180;
+                const dist = 10 * cameraZoom;
+                let camX, camY, camZ;
+                if (cameraMode === 'fixed') {
+                    // Fixed camera: always behind and above player, no rotation
+                    camX = playerGroup.position.x;
+                    camY = playerGroup.position.y + 10 * cameraZoom;
+                    camZ = playerGroup.position.z + 18 * cameraZoom;
+                    camera.position.set(camX, camY, camZ);
+                    camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
+                } else {
+                    camX = playerGroup.position.x + dist * Math.sin(radYaw) * Math.cos(radPitch);
+                    camY = playerGroup.position.y + 5 + dist * Math.sin(radPitch);
+                    camZ = playerGroup.position.z + dist * Math.cos(radYaw) * Math.cos(radPitch);
+                    camera.position.set(camX, camY, camZ);
+                    camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
+                }
+            } else {
+                // First person: camera at head, rotate with yaw
+                const radYaw = camYaw * Math.PI/180;
+                const radPitch = clamp(camPitch, -40, 60) * Math.PI/180;
+                const headX = playerGroup.position.x;
+                const headY = playerGroup.position.y + 1.75;
+                const headZ = playerGroup.position.z;
+                camera.position.set(headX, headY, headZ);
+                camera.lookAt(
+                    headX + Math.sin(radYaw) * Math.cos(radPitch),
+                    headY + Math.sin(radPitch),
+                    headZ - Math.cos(radYaw) * Math.cos(radPitch)
+                );
+            }
+            renderer.render(scene, camera);
+            updateUI();
+        }
+        // --- Settings Modal Camera Controls ---
+        const settingsPOVBtn = document.getElementById('settingsPOVBtn');
+        const settingsCameraModeBtn = document.getElementById('settingsCameraModeBtn');
+        settingsPOVBtn.onclick = function() {
+            if (povMode === 'third') {
+                povMode = 'first';
+                settingsPOVBtn.innerText = 'Third Person';
+            } else {
+                povMode = 'third';
+                settingsPOVBtn.innerText = 'First Person';
+            }
+        };
+        settingsCameraModeBtn.onclick = function() {
+            if (cameraMode === 'open') {
+                cameraMode = 'fixed';
+                settingsCameraModeBtn.innerText = 'Open Camera';
+            } else {
+                cameraMode = 'open';
+                settingsCameraModeBtn.innerText = 'Fixed Camera';
+            }
+        };
+
+        // --- Settings Modal ---
+                const swapControlsContainer = document.getElementById('swapControlsContainer');
+                const swapControlsBtn = document.getElementById('swapControlsBtn');
+                // Hide swap controls button for non-touch devices
+                if (!('ontouchstart' in window)) {
+                    swapControlsContainer.style.display = 'none';
+                } else {
+                    swapControlsBtn.onclick = function() {
+                        window.swapControls();
+                    };
+                }
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsModal = document.getElementById('settingsModal');
+        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+        // Attach Pause/Play Music logic to the static button
+        const musicBtn = document.getElementById('musicToggleBtn');
+        const bgMusic = document.getElementById('bgMusic');
+        function updateMusicBtn() {
+            if (!bgMusic) return;
+            musicBtn.textContent = bgMusic.paused || bgMusic.muted ? 'Play Music' : 'Pause Music';
+        }
+        musicBtn.onclick = function() {
+            if (!bgMusic) return;
+            // Toggle mute as fallback for browsers blocking pause/play
+            if (bgMusic.paused || bgMusic.muted) {
+                bgMusic.muted = false;
+                bgMusic.play().then(updateMusicBtn).catch(() => {
+                    bgMusic.muted = false;
+                    updateMusicBtn();
+                });
+            } else {
+                bgMusic.pause();
+                bgMusic.muted = true;
+                updateMusicBtn();
+            }
+        };
+        // Ensure button state updates on music events
+        bgMusic.addEventListener('play', updateMusicBtn);
+        bgMusic.addEventListener('pause', updateMusicBtn);
+        updateMusicBtn();
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValue = document.getElementById('zoomValue');
+        const sensitivitySlider = document.getElementById('sensitivitySlider');
+        const sensitivityValue = document.getElementById('sensitivityValue');
+
+        settingsBtn.onclick = function() {
+            settingsModal.style.display = 'flex';
+        };
+        closeSettingsBtn.onclick = function() {
+            settingsModal.style.display = 'none';
+        };
+        zoomSlider.oninput = function() {
+            cameraZoom = parseInt(this.value, 10) / 100;
+            zoomValue.innerText = this.value + '%';
+        };
+        sensitivitySlider.oninput = function() {
+            cameraSensitivity = parseInt(this.value, 10);
+            sensitivityValue.innerText = this.value;
+        };
+
+        // --- Level/Restart Buttons ---
+                // --- Logout Button ---
+                document.getElementById('logoutBtn').onclick = function() {
+                    // Save current user's progress before logout
+                    if (currentUser) {
+                        saveUserProgress();
+                    }
+                    // Pause music on logout
+                    if (bgMusic) {
+                        bgMusic.pause();
+                        bgMusic.muted = true;
+                        updateMusicBtn();
+                    }
+                    currentUser = null;
+                    questProgress = {
+                        easy: 0,
+                        hard: 0,
+                        veryhard: 0,
+                        tempFly: false,
+                        permFly: false,
+                        coins: 0,
+                        dailyQuestDate: '',
+                        dailyQuestProgress: 0,
+                        weeklyQuestDate: '',
+                        weeklyQuestProgress: 0
+                    };
+                    // Close chat on logout
+                    const chatModal = document.getElementById('chatModal');
+                    if (chatModal) chatModal.style.display = 'none';
+                    showAuthModal();
+                    updateUI();
+                };
+        nextLevelBtn.onclick = () => {
+            levelComplete.style.display = 'none';
+            currentLevel++;
+            loadLevel(currentLevel);
+            gameActive = true;
+             checkAndGrantQuestCoins();
+        };
+        restartBtn.onclick = () => {
+            gameComplete.style.display = 'none';
+            currentLevel = 0;
+            loadLevel(currentLevel);
+            gameActive = true;
+             checkAndGrantQuestCoins();
+        };
+    // --- Quests Modal ---
+    document.getElementById('questsBtn').onclick = showQuestsModal;
+    document.getElementById('closeQuestsBtn').onclick = hideQuestsModal;
+        // Auth logic
+        const authModal = document.getElementById('authModal');
+        const usernameInput = document.getElementById('usernameInput');
+        const passwordInput = document.getElementById('passwordInput');
+        const loginBtn = document.getElementById('loginBtn');
+        const authMsg = document.getElementById('authMsg');
+        function hash(str) { return btoa(unescape(encodeURIComponent(str))); }
+        loginBtn.onclick = function() {
+            const u = usernameInput.value.trim();
+            const p = passwordInput.value;
+            if (!u || !p) { authMsg.innerText = 'Enter username and password.'; return; }
+            const stored = localStorage.getItem('obbyAuth_' + u);
+            if (!stored) { authMsg.innerText = 'User not found.'; return; }
+            if (stored !== hash(p)) { authMsg.innerText = 'Incorrect password.'; return; }
+            currentUser = u;
+            loadUserProgress();
+            hideAuthModal();
+            // Resume music on login
+            if (bgMusic) {
+                bgMusic.muted = false;
+                bgMusic.play().then(updateMusicBtn).catch(() => {
+                    bgMusic.muted = false;
+                    updateMusicBtn();
+                });
+            }
+        };
+        // Show auth modal if not logged in
+        window.addEventListener('load', () => {
+            if (!localStorage.getItem('obbyAuth_' + currentUser)) showAuthModal();
+        });
+        // --- Magic Carpet State ---
+        let carpetMesh = null;
+        function spawnMagicCarpet(permanent=false) {
+            if (carpetMesh) scene.remove(carpetMesh);
+            carpetMesh = new THREE.Group();
+            // Carpet base
+            const base = new THREE.Mesh(new THREE.BoxGeometry(3, 0.1, 2), new THREE.MeshStandardMaterial({ color: 0xff00ff, emissive: 0x8800ff }));
+            base.position.set(0, 0, 0);
+            carpetMesh.add(base);
+            // Carpet sides
+            for (let i=0;i<2;i++) {
+                const side = new THREE.Mesh(new THREE.BoxGeometry(3, 0.05, 0.1), new THREE.MeshStandardMaterial({ color: 0xffff00 }));
+                side.position.set(0, 0.05, i===0?-0.95:0.95);
+                carpetMesh.add(side);
+            }
+            // Place under player
+            carpetMesh.position.set(playerGroup.position.x, playerGroup.position.y-1.2, playerGroup.position.z);
+            scene.add(carpetMesh);
+        }
+        function removeMagicCarpet() {
+            if (carpetMesh) { /* remove from scene */ carpetMesh = null; }
+        }
+        // Magic carpet controls
+        let carpetActive = false;
+        window.addEventListener('keydown', e => {
+            if (!currentUser) return;
+            if ((hasTempCarpet || hasPermCarpet) && e.code === 'KeyC') {
+                carpetActive = !carpetActive;
+                if (carpetActive) spawnMagicCarpet(hasPermCarpet);
+                else removeMagicCarpet();
+            }
+        });
+            // Magic carpet follow player
+            if (carpetActive && carpetMesh && playerGroup) {
+                carpetMesh.position.set(playerGroup.position.x, playerGroup.position.y-1.2, playerGroup.position.z);
+                // Allow flying controls
+                if (keys['KeyW']) playerGroup.position.z -= 0.25;
+                if (keys['KeyS']) playerGroup.position.z += 0.25;
+                if (keys['KeyA']) playerGroup.position.x -= 0.25;
+                if (keys['KeyD']) playerGroup.position.x += 0.25;
+                if (keys['Space']) playerGroup.position.y += 0.18;
+                if (keys['ShiftLeft']) playerGroup.position.y -= 0.18;
+            }
+
+        // --- Responsive ---
+        window.addEventListener('resize', () => {
+            if (typeof camera !== 'undefined' && camera) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+            }
+            if (typeof renderer !== 'undefined' && renderer) {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+        });
+
+        // --- Chat System ---
+        let chatMessages = JSON.parse(localStorage.getItem('globalChat')) || [];
+        const MAX_CHAT_MESSAGES = 50;
+        
+        function sendChatMessage(username, message) {
+            if (!message.trim()) return false;
+            const msg = {
+                user: username,
+                text: message.substring(0, 200),
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+            chatMessages.push(msg);
+            if (chatMessages.length > MAX_CHAT_MESSAGES) chatMessages.shift();
+            localStorage.setItem('globalChat', JSON.stringify(chatMessages));
+            updateChatDisplay();
+            return true;
+        }
+        
+        function updateChatDisplay() {
+            const chatBox = document.getElementById('chatMessages');
+            if (!chatBox) return;
+            chatBox.innerHTML = chatMessages.map(msg => 
+                `<div style='margin-bottom:10px;padding:8px;background:rgba(35,39,58,0.6);border-radius:8px;border-left:3px solid #00eaff;'>
+                    <span style='color:#00eaff;font-weight:bold;'>${escapeHtml(msg.user)}</span>
+                    <span style='color:#888;font-size:0.9em;margin-left:8px;'>${msg.time}</span>
+                    <div style='color:#fff;margin-top:4px;word-wrap:break-word;'>${escapeHtml(msg.text)}</div>
+                </div>`
+            ).join('');
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        const chatBtn = document.getElementById('chatBtn');
+        const chatModal = document.getElementById('chatModal');
+        const chatInput = document.getElementById('chatInput');
+        const sendChatBtn = document.getElementById('sendChatBtn');
+        const closeChatBtn = document.getElementById('closeChatBtn');
+        
+        chatBtn.onclick = function() {
+            chatModal.style.display = 'flex';
+            updateChatDisplay();
+        };
+        
+        closeChatBtn.onclick = function() {
+            chatModal.style.display = 'none';
+        };
+        
+        sendChatBtn.onclick = function() {
+            if (!currentUser) { alert('Login first!'); return; }
+            if (sendChatMessage(currentUser, chatInput.value)) {
+                chatInput.value = '';
+            }
+        };
+        
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatBtn.click();
+            }
+        });
+        
+        // Auto-refresh chat every 2 seconds
+        setInterval(() => {
+            if (chatModal.style.display === 'flex') {
+                const latestChat = JSON.parse(localStorage.getItem('globalChat')) || [];
+                if (latestChat.length !== chatMessages.length) {
+                    chatMessages = latestChat;
+                    updateChatDisplay();
+                }
+            }
+        }, 2000);
+
+        // --- Start Game ---
+        // Wait for difficulty selection
+</script>
+
+<!-- Chat Modal -->
+<div id="chatModal" style="display:none;position:fixed;bottom:20px;right:20px;width:420px;height:500px;background:linear-gradient(135deg,#23273a 70%,#00eaff22 100%);border-radius:16px;box-shadow:0 8px 32px #00eaff55;z-index:150;flex-direction:column;border:2px solid #00eaff33;">
+    <div style="padding:16px 20px;border-bottom:2px solid #00eaff33;display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-size:1.3em;font-weight:bold;color:#00eaff;display:flex;align-items:center;gap:10px;">
+            <span>💬</span> Global Chat
+        </div>
+        <button id="closeChatBtn" style="background:none;border:none;color:#00eaff;font-size:1.5em;cursor:pointer;">&times;</button>
+    </div>
+    <div id="chatMessages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px;background:rgba(20,24,32,0.8);"></div>
+    <div style="padding:12px 16px;border-top:2px solid #00eaff33;display:flex;gap:8px;">
+        <input id="chatInput" type="text" placeholder="Type a message..." style="flex:1;padding:10px;border:2px solid #00eaff33;border-radius:8px;background:#23273a;color:#fff;font-size:0.95em;outline:none;" />
+        <button id="sendChatBtn" style="padding:10px 12px;background:linear-gradient(90deg,#00eaff,#00ff85);border:none;border-radius:8px;color:#222;font-weight:bold;cursor:pointer;transition:0.2s;">Send</button>
+    </div>
+</div>
+
+<!-- Chat Toggle Button -->
+<button id="chatBtn" style="position:fixed;bottom:20px;right:470px;z-index:60;padding:12px 18px;border-radius:12px;background:linear-gradient(90deg,#00eaff,#00ff85);color:#222;font-weight:bold;font-size:1.1em;border:none;box-shadow:0 2px 8px #0004;cursor:pointer;transition:0.2s;">💬 Chat</button>
+
+<!-- Cosmetic Shop Modal -->
+<div id="cosmeticShopModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:120;background:rgba(20,24,40,0.97);flex-direction:column;align-items:center;justify-content:center;">
+    <div style="background:#23273a;border-radius:18px;padding:32px 32px 24px 32px;min-width:340px;max-width:90vw;box-shadow:0 4px 32px #000a;display:flex;flex-direction:column;align-items:center;">
+        <h2 style="color:#00eaff;margin-bottom:18px;">Cosmetic Shop</h2>
+        <div id="cosmeticShopTabs" style="display:flex;gap:18px;margin-bottom:18px;">
+            <button id="cosmeticTabHats" style="padding:8px 18px;border-radius:8px;border:none;background:#00eaff;color:#222;font-weight:bold;">Hats</button>
+            <button id="cosmeticTabTrails" style="padding:8px 18px;border-radius:8px;border:none;background:#23273a;color:#fff;font-weight:bold;">Trails</button>
+        </div>
+        <div id="cosmeticShopContent" style="min-height:120px;width:100%;display:flex;flex-direction:column;align-items:center;"></div>
+        <div id="cosmeticShopMsg" style="color:#ffd700;margin-top:12px;min-height:24px;"></div>
+        <button id="closeCosmeticShopBtn" style="margin-top:18px;padding:8px 24px;border-radius:8px;border:none;background:#00eaff;color:#222;font-weight:bold;">Close</button>
+    </div>
+</div>
+
+<!-- Cosmetic Shop Button (fixed, next to shop/admin) -->
+<button id="cosmeticShopBtn" style="display:none;position:fixed;bottom:18px;left:500px;z-index:80;padding:12px 24px;border-radius:12px;background:linear-gradient(90deg,#00eaff,#00ff85);color:#222;font-weight:bold;font-size:1.1em;border:none;box-shadow:0 2px 8px #0004;">Cosmetics</button>
+<style>
+    body { overflow: hidden !important; }
+</style>
+</body>
+</html>
