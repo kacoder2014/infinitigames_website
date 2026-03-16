@@ -277,6 +277,21 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
+    // ── Online players list ──
+    if (url === '/api/online' && req.method === 'GET') {
+      const username = sessionUser(req);
+      if (!username) return json(res, 401, { error: 'Not logged in' });
+      const seen = new Set();
+      const list = [];
+      for (const [ws, c] of clients) {
+        if (c.username && ws.readyState === ws.OPEN && !seen.has(c.username.toLowerCase()) && c.username.toLowerCase() !== username.toLowerCase()) {
+          seen.add(c.username.toLowerCase());
+          list.push({ username: c.username, game: c.game });
+        }
+      }
+      return json(res, 200, { users: list });
+    }
+
     // ── Admin ──
     if (url === '/api/admin/users' && req.method === 'GET') {
       const username = sessionUser(req);
@@ -376,6 +391,13 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // ── CoC multiplayer: route messages between two players ──
+    if (msg.type && msg.type.startsWith('coc_') && msg.to) {
+      if (!client.username) return;
+      sendTo(msg.to, { ...msg, from: client.username });
+      return;
+    }
+
     if (msg.type === 'message') {
       if (!client?.username) return;
       const text = String(msg.text || '').trim().slice(0, 500);
@@ -393,8 +415,11 @@ wss.on('connection', (ws, req) => {
     clients.delete(ws);
     if (client?.username) {
       broadcast({ type: 'system', text: `${client.username} left the chat`, online: onlineCount() });
-      // Only notify offline if no other connections remain for this user
-      if (!isOnline(client.username)) notifyFriendsPresence(client.username, false, null);
+      if (!isOnline(client.username)) {
+        notifyFriendsPresence(client.username, false, null);
+        // Notify any active CoC opponent that this player disconnected
+        broadcast({ type: 'coc_opponent_left', from: client.username });
+      }
     }
   });
 });

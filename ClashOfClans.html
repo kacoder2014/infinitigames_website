@@ -1072,6 +1072,7 @@
             <button class="small-btn pack" onclick="buyCardPack()">🎁 Buy Pack</button>
             <button class="small-btn upgrade" onclick="upgradeArmy()">⬆ Upgrade Army</button>
             <button class="small-btn play" onclick="startBattle()">⚔ Start Battle</button>
+            <button class="small-btn" onclick="loadMPScreen()" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border-color:#7c3aed;">👥 Multiplayer</button>
             <button class="small-btn logout" onclick="logout()">⎋ Logout</button>
           </div>
         </div>
@@ -2082,6 +2083,199 @@
     });
   </script>
 
+  <!-- MULTIPLAYER SCREEN -->
+  <div id="multiplayerScreen" class="screen">
+    <div class="app-screen">
+      <div class="app-shell">
+        <div class="home-header">
+          <div class="home-title">
+            <h2>👥 Multiplayer</h2>
+            <p>Challenge another player online to a live 1v1 battle.</p>
+          </div>
+          <div class="header-actions">
+            <button class="small-btn" onclick="loadMPScreen()" style="background:#1e293b;border-color:#334155;">🔄 Refresh</button>
+            <button class="small-btn logout" onclick="showScreen('homeScreen')">← Back</button>
+          </div>
+        </div>
+        <div class="panel" style="margin:1rem;padding:1.2rem;">
+          <h3 style="margin-bottom:.8rem;">🟢 Online Players</h3>
+          <div id="mpStatus" style="font-size:.85rem;color:#7c3aed;min-height:1.2rem;margin-bottom:.6rem;"></div>
+          <div id="mpPlayerList"><p style="color:#64748b;font-size:.85rem;">Loading…</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHALLENGE NOTIFICATION OVERLAY -->
+  <div id="challengeOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(8,11,18,.88);align-items:center;justify-content:center;">
+    <div style="background:#0f1623;border:1px solid rgba(124,58,237,.5);border-radius:1rem;padding:2.2rem 2.5rem;text-align:center;max-width:340px;box-shadow:0 20px 60px rgba(0,0,0,.7);">
+      <div style="font-size:2.5rem;margin-bottom:.6rem;">⚔️</div>
+      <h2 style="font-family:Orbitron,sans-serif;font-size:1.1rem;margin-bottom:.5rem;color:#e2e8f0;">Incoming Challenge!</h2>
+      <p id="challengeFromText" style="color:#94a3b8;margin-bottom:1.4rem;font-size:.95rem;"></p>
+      <div style="display:flex;gap:.8rem;justify-content:center;">
+        <button onclick="acceptChallenge()" style="background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;padding:.65rem 1.4rem;border-radius:9999px;font-size:.9rem;font-weight:700;cursor:pointer;">✓ Accept</button>
+        <button onclick="declineChallenge()" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:.65rem 1.4rem;border-radius:9999px;font-size:.9rem;font-weight:700;cursor:pointer;">✕ Decline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MULTIPLAYER SCRIPT -->
+  <script>
+  let cocWs       = null;
+  let mpMode      = false;
+  let mpOpponent  = null;
+  let pendingChallenger = null;
+
+  // ── WS connection ──────────────────────────────────────────
+  function initCoCWS(username) {
+    const url = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+    cocWs = new WebSocket(url);
+    cocWs.onopen = () => {
+      cocWs.send(JSON.stringify({ type: 'join', username }));
+      fetch('/api/presence', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ game: 'ClashOfClans.html' }) });
+    };
+    cocWs.onmessage = e => { try { handleCoCMsg(JSON.parse(e.data)); } catch {} };
+    cocWs.onclose   = () => { setTimeout(() => { if (currentUser) initCoCWS(currentUser); }, 3000); };
+  }
+
+  // ── Incoming WS message router ─────────────────────────────
+  function handleCoCMsg(msg) {
+    if (msg.type === 'coc_challenge') {
+      if (!currentUser || battleActive) {
+        if (cocWs.readyState === 1) cocWs.send(JSON.stringify({ type: 'coc_challenge_declined', to: msg.from }));
+        return;
+      }
+      pendingChallenger = msg.from;
+      document.getElementById('challengeFromText').textContent = msg.from + ' wants to battle you 1v1!';
+      document.getElementById('challengeOverlay').style.display = 'flex';
+    }
+    if (msg.type === 'coc_challenge_accepted') {
+      document.getElementById('mpStatus').textContent = '';
+      startMPBattle(msg.from);
+    }
+    if (msg.type === 'coc_challenge_declined') {
+      document.getElementById('mpStatus').textContent = msg.from + ' declined your challenge.';
+    }
+    if (msg.type === 'coc_deploy') {
+      if (!battleActive || !mpMode) return;
+      const laneX = msg.lane === 'left' ? 110 : 308;
+      spawnUnit(msg.cardId, laneX + (Math.random() * 16 - 8), 0, 'enemy');
+    }
+    if (msg.type === 'coc_game_over') {
+      if (!battleActive) return;
+      const iWon = msg.winner === currentUser;
+      mpMode = false;
+      _origFinishBattle(iWon);
+    }
+    if (msg.type === 'coc_opponent_left') {
+      if (battleActive && mpMode) {
+        mpMode = false;
+        alert('Opponent disconnected. You win!');
+        _origFinishBattle(true);
+      }
+    }
+  }
+
+  // ── Multiplayer screen ──────────────────────────────────────
+  async function loadMPScreen() {
+    showScreen('multiplayerScreen');
+    document.getElementById('mpStatus').textContent = '';
+    const list = document.getElementById('mpPlayerList');
+    list.innerHTML = '<p style="color:#64748b;font-size:.85rem;">Loading…</p>';
+    try {
+      const r = await fetch('/api/online');
+      if (!r.ok) { list.innerHTML = '<p style="color:#ef4444;">Not logged in.</p>'; return; }
+      const { users } = await r.json();
+      if (!users.length) {
+        list.innerHTML = '<p style="color:#64748b;font-size:.85rem;">No other players online right now. Share the link and get a friend to join!</p>';
+        return;
+      }
+      list.innerHTML = users.map(u => `
+        <div style="display:flex;align-items:center;justify-content:space-between;
+          background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+          border-radius:.6rem;padding:.75rem 1rem;margin-bottom:.5rem;">
+          <div style="display:flex;align-items:center;gap:.6rem;">
+            <div style="width:9px;height:9px;border-radius:50%;background:#10b981;flex-shrink:0;"></div>
+            <span style="font-weight:600;color:#e2e8f0;">${u.username}</span>
+            <span style="font-size:.72rem;color:${u.game==='ClashOfClans.html'?'#f59e0b':'#64748b'};">
+              ${u.game === 'ClashOfClans.html' ? '⚔️ In CoC' : '🌐 Online'}
+            </span>
+          </div>
+          <button onclick="sendChallenge('${u.username}')"
+            style="background:linear-gradient(135deg,#7c3aed,#06b6d4);border:none;color:#fff;
+              padding:.4rem 1rem;border-radius:9999px;font-size:.8rem;font-weight:700;cursor:pointer;">
+            ⚔️ Challenge
+          </button>
+        </div>`).join('');
+    } catch {
+      list.innerHTML = '<p style="color:#ef4444;">Network error.</p>';
+    }
+  }
+
+  function sendChallenge(to) {
+    if (!cocWs || cocWs.readyState !== 1) {
+      document.getElementById('mpStatus').textContent = 'Not connected. Try refreshing.';
+      return;
+    }
+    document.getElementById('mpStatus').textContent = `⏳ Challenge sent to ${to} — waiting for response…`;
+    cocWs.send(JSON.stringify({ type: 'coc_challenge', to }));
+  }
+
+  function acceptChallenge() {
+    document.getElementById('challengeOverlay').style.display = 'none';
+    const challenger = pendingChallenger;
+    pendingChallenger = null;
+    if (cocWs && cocWs.readyState === 1)
+      cocWs.send(JSON.stringify({ type: 'coc_challenge_accepted', to: challenger }));
+    startMPBattle(challenger);
+  }
+
+  function declineChallenge() {
+    document.getElementById('challengeOverlay').style.display = 'none';
+    if (pendingChallenger && cocWs && cocWs.readyState === 1)
+      cocWs.send(JSON.stringify({ type: 'coc_challenge_declined', to: pendingChallenger }));
+    pendingChallenger = null;
+  }
+
+  function startMPBattle(opponent) {
+    mpMode     = true;
+    mpOpponent = opponent;
+    startBattle();
+    // Replace "Enemy" label with opponent's real name
+    const enemyLabel = document.querySelector('#battleScreen .topbar-player .battle-name');
+    if (enemyLabel) enemyLabel.textContent = opponent;
+    document.getElementById('battleStatus').textContent = `⚔️ 1v1 vs ${opponent} — deploy your cards!`;
+  }
+
+  // ── Patch deployCard: broadcast player moves in multiplayer ─
+  const _origDeployCard = deployCard;
+  deployCard = function(cardId, x, y, side) {
+    _origDeployCard(cardId, x, y, side);
+    if (mpMode && side === 'player' && cocWs && cocWs.readyState === 1) {
+      cocWs.send(JSON.stringify({ type: 'coc_deploy', to: mpOpponent, cardId, lane: x < 220 ? 'left' : 'right' }));
+    }
+  };
+
+  // ── Patch enemyDeploy: disable AI when in multiplayer ──────
+  const _origEnemyDeploy = enemyDeploy;
+  enemyDeploy = function() {
+    if (mpMode) return;   // opponent's real cards come via WS instead
+    _origEnemyDeploy();
+  };
+
+  // ── Patch finishBattle: notify opponent of result ──────────
+  const _origFinishBattle = finishBattle;
+  finishBattle = function(playerWon) {
+    if (mpMode && battleActive) {
+      mpMode = false;
+      if (cocWs && cocWs.readyState === 1)
+        cocWs.send(JSON.stringify({ type: 'coc_game_over', to: mpOpponent, winner: playerWon ? currentUser : mpOpponent }));
+    }
+    _origFinishBattle(playerWon);
+  };
+  </script>
+
   <!-- InfinitiGames auto-login: skip login screen if already signed in -->
   <script>
   (async function () {
@@ -2097,6 +2291,7 @@
       // Auto-login directly — no password prompt
       currentUser = username;
       loadHome();
+      initCoCWS(username);
     } catch {}
   })();
   </script>
