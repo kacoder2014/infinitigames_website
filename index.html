@@ -711,6 +711,143 @@
       flex-shrink: 0;
     }
 
+    /* ── Auth modal ── */
+    #authOverlay {
+      position: fixed; inset: 0; z-index: 999;
+      background: rgba(8,11,18,.85);
+      backdrop-filter: blur(12px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+
+    #authCard {
+      background: #0f1623;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 1.5rem;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      box-shadow: 0 40px 100px rgba(0,0,0,.6);
+    }
+
+    .auth-logo {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.3rem;
+      text-align: center;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 2px;
+    }
+
+    .auth-tagline {
+      text-align: center;
+      color: var(--muted);
+      font-size: .85rem;
+      margin-top: -.8rem;
+    }
+
+    .auth-tabs {
+      display: flex;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: .75rem;
+      padding: .3rem;
+      gap: .3rem;
+    }
+
+    .auth-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: .55rem;
+      border-radius: .5rem;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .2s, color .2s;
+    }
+
+    .auth-tab.active {
+      background: rgba(124,58,237,.25);
+      color: #a78bfa;
+    }
+
+    .auth-fields { display: flex; flex-direction: column; gap: .75rem; }
+
+    .auth-input {
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: .65rem;
+      color: var(--text);
+      font-size: .95rem;
+      padding: .75rem 1rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .2s;
+      width: 100%;
+    }
+
+    .auth-input:focus { border-color: rgba(124,58,237,.5); }
+    .auth-input::placeholder { color: var(--muted); }
+
+    .auth-error {
+      font-size: .8rem;
+      color: #f87171;
+      min-height: 1.1rem;
+      padding: 0 .2rem;
+    }
+
+    .auth-btn {
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      color: #fff;
+      border: none;
+      border-radius: 9999px;
+      padding: .8rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .2s, transform .15s;
+      letter-spacing: .5px;
+    }
+
+    .auth-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .auth-btn:disabled { opacity: .45; cursor: default; transform: none; }
+
+    /* Navbar user display */
+    #navUserArea { display: flex; align-items: center; gap: .75rem; }
+    #navUsername {
+      font-size: .85rem; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: .4rem;
+    }
+    #navUsername .avatar-sm {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+    }
+    #logoutBtn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: .35rem .85rem;
+      border-radius: 9999px;
+      font-size: .78rem;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color .2s, color .2s;
+    }
+    #logoutBtn:hover { border-color: rgba(255,255,255,.2); color: var(--text); }
+
     /* ── Footer ── */
     footer {
       position: relative;
@@ -753,8 +890,11 @@
     <li><a href="#games">Games</a></li>
     <li><a href="#chat">Chat</a></li>
     <li><a href="#leaderboard">Leaderboard</a></li>
-    <li><a href="#chat" class="nav-cta">Join Free</a></li>
   </ul>
+  <div id="navUserArea">
+    <!-- Filled by JS -->
+    <a href="#" class="nav-cta" id="navJoinBtn">Join Free</a>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -885,17 +1025,12 @@
 
   <div class="live-chat-wrap" id="chatWrap">
 
-    <!-- Step 1: username gate -->
+    <!-- Gate: shown only when not logged in -->
     <div class="chat-gate" id="chatGate">
-      <div style="font-size:2.5rem">💬</div>
-      <h3>Join the Chat</h3>
-      <p>Pick a username to jump in — no account needed.</p>
-      <div class="chat-gate-row">
-        <input id="usernameInput" class="chat-input-field" type="text"
-               placeholder="Your username…" maxlength="24" autocomplete="off" />
-        <button class="chat-join-btn" id="joinBtn">Join →</button>
-      </div>
-      <div class="chat-status" id="gateStatus"></div>
+      <div style="font-size:2.5rem">🔐</div>
+      <h3>Login to Chat</h3>
+      <p>Create a free InfinitiGames account to jump into the conversation.</p>
+      <button class="chat-join-btn" id="chatLoginBtn">Create Account / Log In</button>
     </div>
 
     <!-- Step 2: live chat (hidden until joined) -->
@@ -921,136 +1056,259 @@
   </div>
 </section>
 
+<!-- AUTH MODAL -->
+<div id="authOverlay" style="display:none">
+  <div id="authCard">
+    <div class="auth-logo">INFINITI<span style="-webkit-text-fill-color:#06b6d4">GAMES</span></div>
+    <p class="auth-tagline">One account. Every game. Live chat.</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin">Log In</button>
+      <button class="auth-tab" id="tabRegister">Sign Up</button>
+    </div>
+
+    <!-- Login -->
+    <div id="loginForm" class="auth-fields">
+      <input id="loginUser" class="auth-input" type="text" placeholder="Username" autocomplete="username" />
+      <input id="loginPass" class="auth-input" type="password" placeholder="Password" autocomplete="current-password" />
+      <div class="auth-error" id="loginError"></div>
+      <button class="auth-btn" id="loginBtn">Log In →</button>
+    </div>
+
+    <!-- Register -->
+    <div id="registerForm" class="auth-fields" style="display:none">
+      <input id="regUser" class="auth-input" type="text" placeholder="Username (letters, numbers, _)" autocomplete="username" />
+      <input id="regPass" class="auth-input" type="password" placeholder="Password (min 4 chars)" autocomplete="new-password" />
+      <div class="auth-error" id="regError"></div>
+      <button class="auth-btn" id="registerBtn">Create Account →</button>
+    </div>
+  </div>
+</div>
+
 <!-- CHAT SCRIPT -->
 <script>
+/* ═══════════════════════════════════════════════════════════
+   InfinitiGames – Auth + Chat
+   ═══════════════════════════════════════════════════════════ */
 (function () {
-  const AVATAR_COLORS = [
-    ['rgba(124,58,237,.3)','#a78bfa'],
-    ['rgba(6,182,212,.3)', '#22d3ee'],
-    ['rgba(16,185,129,.3)','#34d399'],
-    ['rgba(245,158,11,.3)','#fbbf24'],
-    ['rgba(239,68,68,.3)', '#f87171'],
-    ['rgba(236,72,153,.3)','#f472b6'],
-    ['rgba(234,88,12,.3)', '#fb923c'],
-  ];
 
+  /* ── Helpers ── */
+  const COLORS = [
+    ['rgba(124,58,237,.3)','#a78bfa'],['rgba(6,182,212,.3)','#22d3ee'],
+    ['rgba(16,185,129,.3)','#34d399'],['rgba(245,158,11,.3)','#fbbf24'],
+    ['rgba(239,68,68,.3)','#f87171'], ['rgba(236,72,153,.3)','#f472b6'],
+    ['rgba(234,88,12,.3)','#fb923c'],
+  ];
   const colorCache = {};
   function colorFor(name) {
     if (!colorCache[name]) {
-      let h = 0;
-      for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-      colorCache[name] = AVATAR_COLORS[h % AVATAR_COLORS.length];
+      let h = 0; for (let i=0;i<name.length;i++) h=(h*31+name.charCodeAt(i))>>>0;
+      colorCache[name] = COLORS[h % COLORS.length];
     }
     return colorCache[name];
   }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
-  // Elements
-  const gate         = document.getElementById('chatGate');
+  /* ── State ── */
+  let currentUser = null;   // username string once logged in
+  let ws = null;
+  let reconnectTimer = null;
+
+  /* ── DOM refs ── */
+  const authOverlay  = document.getElementById('authOverlay');
+  const navJoinBtn   = document.getElementById('navJoinBtn');
+  const navUserArea  = document.getElementById('navUserArea');
+
+  // auth modal
+  const tabLogin     = document.getElementById('tabLogin');
+  const tabRegister  = document.getElementById('tabRegister');
+  const loginForm    = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+  const loginUser    = document.getElementById('loginUser');
+  const loginPass    = document.getElementById('loginPass');
+  const loginError   = document.getElementById('loginError');
+  const loginBtn     = document.getElementById('loginBtn');
+  const regUser      = document.getElementById('regUser');
+  const regPass      = document.getElementById('regPass');
+  const regError     = document.getElementById('regError');
+  const registerBtn  = document.getElementById('registerBtn');
+
+  // chat
+  const chatGate     = document.getElementById('chatGate');
   const chatRoom     = document.getElementById('chatRoom');
-  const usernameInput= document.getElementById('usernameInput');
-  const joinBtn      = document.getElementById('joinBtn');
-  const gateStatus   = document.getElementById('gateStatus');
+  const chatLoginBtn = document.getElementById('chatLoginBtn');
   const msgInput     = document.getElementById('msgInput');
   const sendBtn      = document.getElementById('sendBtn');
   const messagesEl   = document.getElementById('chatMessages');
   const onlineBadge  = document.getElementById('onlineBadge');
   const chatStatus   = document.getElementById('chatStatus');
 
-  let ws = null;
-  let myUsername = null;
-  let reconnectTimer = null;
-  let pendingJoin = null;   // username to send once socket opens
+  /* ══════════════════════════════════════════════════════════
+     AUTH
+  ══════════════════════════════════════════════════════════ */
+  function showModal() { authOverlay.style.display = 'flex'; }
+  function hideModal() { authOverlay.style.display = 'none'; }
 
-  // ── WebSocket ──────────────────────────────────────────────
-  function wsUrl() {
-    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    return `${proto}://${location.host}`;
+  function onLoggedIn(username) {
+    currentUser = username;
+    hideModal();
+    renderNav();
+    openChatRoom();
+    connectWS();
   }
 
-  function connect() {
-    if (ws && ws.readyState <= WebSocket.OPEN) return; // already connecting/open
-    clearTimeout(reconnectTimer);
+  function renderNav() {
+    if (currentUser) {
+      const [,fg] = colorFor(currentUser);
+      navUserArea.innerHTML = `
+        <div id="navUsername">
+          <div class="avatar-sm" style="background:linear-gradient(135deg,${fg},#06b6d4)">${esc(currentUser.charAt(0).toUpperCase())}</div>
+          ${esc(currentUser)}
+        </div>
+        <button id="logoutBtn">Log out</button>`;
+      document.getElementById('logoutBtn').addEventListener('click', doLogout);
+    } else {
+      navUserArea.innerHTML = `<a href="#" class="nav-cta" id="navJoinBtn">Join Free</a>`;
+      document.getElementById('navJoinBtn').addEventListener('click', e => { e.preventDefault(); showModal(); });
+    }
+  }
 
+  async function apiPost(url, body) {
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    return { ok: r.ok, data: await r.json() };
+  }
+
+  // Login
+  loginBtn.addEventListener('click', async () => {
+    loginError.textContent = '';
+    loginBtn.disabled = true; loginBtn.textContent = 'Logging in…';
+    const { ok, data } = await apiPost('/api/login', { username: loginUser.value, password: loginPass.value });
+    loginBtn.disabled = false; loginBtn.textContent = 'Log In →';
+    if (!ok) { loginError.textContent = data.error; return; }
+    onLoggedIn(data.username);
+  });
+  loginPass.addEventListener('keydown', e => { if (e.key==='Enter') loginBtn.click(); });
+
+  // Register
+  registerBtn.addEventListener('click', async () => {
+    regError.textContent = '';
+    registerBtn.disabled = true; registerBtn.textContent = 'Creating…';
+    const { ok, data } = await apiPost('/api/register', { username: regUser.value, password: regPass.value });
+    registerBtn.disabled = false; registerBtn.textContent = 'Create Account →';
+    if (!ok) { regError.textContent = data.error; return; }
+    onLoggedIn(data.username);
+  });
+  regPass.addEventListener('keydown', e => { if (e.key==='Enter') registerBtn.click(); });
+
+  // Tab switching
+  tabLogin.addEventListener('click', () => {
+    tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+    loginForm.style.display='flex'; registerForm.style.display='none';
+    loginError.textContent=''; loginUser.focus();
+  });
+  tabRegister.addEventListener('click', () => {
+    tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+    registerForm.style.display='flex'; loginForm.style.display='none';
+    regError.textContent=''; regUser.focus();
+  });
+
+  // Logout
+  async function doLogout() {
+    await fetch('/api/logout', { method:'POST' });
+    currentUser = null;
+    renderNav();
+    // Close chat room, show gate
+    chatRoom.style.display = 'none';
+    chatGate.style.display = 'flex';
+    if (ws) { ws.close(); ws = null; }
+  }
+
+  // Chat gate button
+  chatLoginBtn.addEventListener('click', () => { showModal(); loginUser.focus(); });
+  navJoinBtn.addEventListener('click', e => { e.preventDefault(); showModal(); });
+
+  // Logout button (close overlay on background click)
+  authOverlay.addEventListener('click', e => { if (e.target === authOverlay) hideModal(); });
+
+  /* ══════════════════════════════════════════════════════════
+     CHECK SESSION ON LOAD
+  ══════════════════════════════════════════════════════════ */
+  async function checkSession() {
+    try {
+      const r = await fetch('/api/me');
+      if (r.ok) {
+        const { username } = await r.json();
+        onLoggedIn(username);
+        return;
+      }
+    } catch {}
+    // Not logged in — show modal
+    showModal();
+    renderNav();
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     CHAT
+  ══════════════════════════════════════════════════════════ */
+  function openChatRoom() {
+    chatGate.style.display = 'none';
+    chatRoom.style.display = 'flex';
+  }
+
+  function wsUrl() {
+    return (location.protocol === 'https:' ? 'wss' : 'ws') + '://' + location.host;
+  }
+
+  function connectWS() {
+    if (ws && ws.readyState <= WebSocket.OPEN) return;
+    clearTimeout(reconnectTimer);
     ws = new WebSocket(wsUrl());
 
-    ws.addEventListener('open', () => {
-      chatStatus.textContent = '';
-      gateStatus.textContent = '';
-      if (pendingJoin) {
-        ws.send(JSON.stringify({ type: 'join', username: pendingJoin }));
-        pendingJoin = null;
-      }
-    });
+    ws.addEventListener('open', () => { chatStatus.textContent = ''; });
 
-    ws.addEventListener('message', (e) => {
-      let data;
-      try { data = JSON.parse(e.data); } catch { return; }
-
-      if (data.online != null) updateOnline(data.online);
-
-      if (data.type === 'system') {
-        appendSystem(data.text);
-      } else if (data.type === 'message') {
-        appendMessage(data.username, data.text, data.time, data.username === myUsername);
-      }
+    ws.addEventListener('message', e => {
+      let d; try { d = JSON.parse(e.data); } catch { return; }
+      if (d.online != null) onlineBadge.textContent = d.online + ' online';
+      if (d.type === 'joined')  { /* server confirmed, nothing extra needed */ }
+      if (d.type === 'system')  appendSystem(d.text);
+      if (d.type === 'message') appendMessage(d.username, d.text, d.time, d.username === currentUser);
     });
 
     ws.addEventListener('close', () => {
-      if (myUsername) {
-        chatStatus.textContent = 'Disconnected — reconnecting…';
-        reconnectTimer = setTimeout(() => { pendingJoin = myUsername; connect(); }, 3000);
-      } else {
-        // Not joined yet — silently retry
-        reconnectTimer = setTimeout(connect, 3000);
-      }
+      if (!currentUser) return;
+      chatStatus.textContent = 'Reconnecting…';
+      reconnectTimer = setTimeout(connectWS, 3000);
     });
 
     ws.addEventListener('error', () => {});
   }
 
-  // Start connecting immediately on page load
-  connect();
-
-  // ── DOM helpers ────────────────────────────────────────────
-  function updateOnline(n) {
-    onlineBadge.textContent = `${n} online`;
-  }
-
   function appendSystem(text) {
-    const row = document.createElement('div');
-    row.className = 'msg sys';
-    row.innerHTML = `<span class="sys-text">${esc(text)}</span>`;
-    messagesEl.appendChild(row);
-    scrollBottom();
+    const el = document.createElement('div');
+    el.className = 'msg sys';
+    el.innerHTML = `<span class="sys-text">${esc(text)}</span>`;
+    messagesEl.appendChild(el);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
   function appendMessage(username, text, time, isMe) {
     const [bg, fg] = colorFor(username);
-    const initial = username.charAt(0).toUpperCase();
-
     const row = document.createElement('div');
     row.className = 'msg' + (isMe ? ' me' : '');
-
-    const avatar = `<div class="avatar" style="background:${bg};color:${fg};">${esc(initial)}</div>`;
-    const meta   = `<div class="msg-meta"><span class="msg-name">${esc(username)}</span><span>${esc(time)}</span></div>`;
-    const bubble = `<div class="bubble">${esc(text)}</div>`;
-
-    row.innerHTML = `${avatar}<div class="msg-col">${isMe ? '' : meta}${bubble}${isMe ? meta : ''}</div>`;
+    row.innerHTML = `
+      <div class="avatar" style="background:${bg};color:${fg};">${esc(username.charAt(0).toUpperCase())}</div>
+      <div class="msg-col">
+        ${!isMe ? `<div class="msg-meta"><span class="msg-name">${esc(username)}</span><span>${esc(time)}</span></div>` : ''}
+        <div class="bubble">${esc(text)}</div>
+        ${isMe ? `<div class="msg-meta"><span>${esc(time)}</span></div>` : ''}
+      </div>`;
     messagesEl.appendChild(row);
-    scrollBottom();
-  }
-
-  function scrollBottom() {
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  function esc(str) {
-    return String(str)
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-      .replace(/"/g,'&quot;');
-  }
-
-  // ── Send ───────────────────────────────────────────────────
   function sendMessage() {
     const text = msgInput.value.trim();
     if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
@@ -1060,31 +1318,11 @@
   }
 
   sendBtn.addEventListener('click', sendMessage);
-  msgInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+  msgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
 
-  // ── Join ───────────────────────────────────────────────────
-  function join() {
-    const name = usernameInput.value.trim();
-    if (!name) { gateStatus.textContent = 'Please enter a username.'; return; }
-    myUsername = name;
+  /* ── Boot ── */
+  checkSession();
 
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      // Already connected — send join instantly
-      ws.send(JSON.stringify({ type: 'join', username: name }));
-    } else {
-      // Socket still opening — queue the join and ensure we're connecting
-      pendingJoin = name;
-      connect();
-    }
-
-    // Show chat room immediately — no waiting for the round-trip
-    gate.style.display = 'none';
-    chatRoom.style.display = 'flex';
-    msgInput.focus();
-  }
-
-  joinBtn.addEventListener('click', join);
-  usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') join(); });
 })();
 </script>
 
