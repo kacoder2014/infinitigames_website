@@ -1798,27 +1798,33 @@ document.getElementById('fpSearchInput').addEventListener('keydown', e => {
 // ── Handle WS friend events (called from chat script) ─────
 window.handleFriendWS = function(data) {
   if (data.type === 'friend_request') {
-    fpData.incoming = fpData.incoming.includes(data.from) ? fpData.incoming : [...fpData.incoming, data.from];
+    const fromLow = data.from.toLowerCase();
+    if (!fpData.incoming.some(u => u.toLowerCase() === fromLow)) fpData.incoming.push(data.from);
     updateBadge();
     if (fpOpen && fpTab === 'requests') renderFP();
-    // Toast notification
     showFriendToast(`👥 ${data.from} sent you a friend request!`);
   }
   if (data.type === 'friend_accepted') {
     showFriendToast(`✅ ${data.from} accepted your friend request!`);
-    if (data.friends) fpData.friends = data.friends;
-    fpData.outgoing = fpData.outgoing.filter(u => u !== data.from);
-    if (fpOpen) renderFP();
-    else loadFriends();
+    fpData.outgoing = fpData.outgoing.filter(u => u.toLowerCase() !== data.from.toLowerCase());
+    // Always re-fetch so online status is fresh
+    loadFriends();
   }
   if (data.type === 'friends_update') {
     fpData.friends = data.friends;
     if (fpOpen && fpTab === 'friends') renderFP();
   }
   if (data.type === 'friend_presence') {
-    const f = fpData.friends.find(x => x.username === data.username);
-    if (f) { f.online = data.online; f.game = data.game; }
-    if (fpOpen && fpTab === 'friends') renderFP();
+    const key = data.username.toLowerCase();
+    const f = fpData.friends.find(x => x.username.toLowerCase() === key);
+    if (f) {
+      f.online = data.online;
+      f.game   = data.game;
+      if (fpOpen && fpTab === 'friends') renderFP();
+    } else {
+      // Friend not in local list yet — refresh from server
+      loadFriends();
+    }
   }
 };
 
