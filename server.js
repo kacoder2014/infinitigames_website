@@ -12,11 +12,12 @@ const FRIENDS_FILE = path.join(__dirname, 'friends.json');
 let users = {};
 try { users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8')); } catch {}
 
-let savePending = false;
+let saveUsersTimer = null;
 function saveUsers() {
-  if (savePending) return;
-  savePending = true;
-  setImmediate(() => { fs.writeFile(USERS_FILE, JSON.stringify(users), () => { savePending = false; }); });
+  clearTimeout(saveUsersTimer);
+  saveUsersTimer = setTimeout(() => {
+    fs.writeFile(USERS_FILE, JSON.stringify(users), () => {});
+  }, 200);
 }
 
 // ── Friends store  { username → { friends:[], incoming:[], outgoing:[] } } ──
