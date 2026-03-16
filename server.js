@@ -88,9 +88,10 @@ function serveFile(filePath, res) {
 const clients = new Map(); // ws → { username, game }
 
 function sendTo(username, data) {
+  const key = username.toLowerCase();
   const msg = JSON.stringify(data);
   for (const [ws, c] of clients)
-    if (c.username === username && ws.readyState === ws.OPEN) ws.send(msg);
+    if (c.username && c.username.toLowerCase() === key && ws.readyState === ws.OPEN) ws.send(msg);
 }
 
 function broadcast(data, excludeWs = null) {
@@ -102,13 +103,15 @@ function broadcastAll(data) { broadcast(data, null); }
 function onlineCount()      { return clients.size; }
 
 function isOnline(username) {
+  const key = username.toLowerCase();
   for (const [ws, c] of clients)
-    if (c.username === username && ws.readyState === ws.OPEN) return true;
+    if (c.username && c.username.toLowerCase() === key && ws.readyState === ws.OPEN) return true;
   return false;
 }
 function getGame(username) {
+  const key = username.toLowerCase();
   for (const [ws, c] of clients)
-    if (c.username === username && ws.readyState === ws.OPEN) return c.game || null;
+    if (c.username && c.username.toLowerCase() === key && ws.readyState === ws.OPEN) return c.game || null;
   return null;
 }
 
@@ -190,17 +193,19 @@ const server = http.createServer(async (req, res) => {
       if (!username) return json(res, 401, { error: 'Not logged in' });
       const { to = '' } = await readBody(req);
       const toKey = to.trim().toLowerCase();
-      if (!toKey || toKey === username.toLowerCase()) return json(res, 400, { error: 'Invalid target.' });
+      if (!toKey) return json(res, 400, { error: 'Enter a username.' });
+      if (toKey === username.toLowerCase()) return json(res, 400, { error: 'You can\'t friend yourself.' });
       const record = users[toKey];
       if (!record) return json(res, 404, { error: 'Player not found.' });
       const target = record.username;
       const myFD = getFD(username), theirFD = getFD(target);
 
-      if (myFD.friends.includes(target))    return json(res, 400, { error: 'Already friends.' });
-      if (myFD.outgoing.includes(target))   return json(res, 400, { error: 'Request already sent.' });
+      const tLow = target.toLowerCase();
+      if (myFD.friends.some(u => u.toLowerCase() === tLow))   return json(res, 400, { error: 'Already friends.' });
+      if (myFD.outgoing.some(u => u.toLowerCase() === tLow))  return json(res, 400, { error: 'Request already sent.' });
 
       // They already sent us one → auto-accept
-      if (myFD.incoming.includes(target)) {
+      if (myFD.incoming.some(u => u.toLowerCase() === tLow)) {
         myFD.friends.push(target);       theirFD.friends.push(username);
         myFD.incoming   = myFD.incoming.filter(u => u !== target);
         theirFD.outgoing = theirFD.outgoing.filter(u => u !== username);
@@ -292,13 +297,19 @@ wss.on('connection', (ws, req) => {
     const client = clients.get(ws);
 
     if (msg.type === 'join') {
-      if (!client.username && msg.username) {
-        client.username = String(msg.username).trim().slice(0, 24);
-        ws.send(JSON.stringify({ type: 'joined', username: client.username, online: onlineCount() }));
-        broadcast({ type: 'system', text: `${client.username} joined the chat`, online: onlineCount() }, ws);
-        const friends = buildFriendsList(client.username);
+      if (msg.username) {
+        // Resolve to the canonical casing stored in users, fallback to what was sent
+        const key = String(msg.username).trim().toLowerCase();
+        const canonical = users[key] ? users[key].username : String(msg.username).trim().slice(0, 24);
+        const wasUnknown = !client.username;
+        client.username = canonical;
+        if (wasUnknown) {
+          ws.send(JSON.stringify({ type: 'joined', username: canonical, online: onlineCount() }));
+          broadcast({ type: 'system', text: `${canonical} joined the chat`, online: onlineCount() }, ws);
+        }
+        const friends = buildFriendsList(canonical);
         if (friends.length) ws.send(JSON.stringify({ type: 'friends_update', friends }));
-        notifyFriendsPresence(client.username, true, null);
+        notifyFriendsPresence(canonical, true, null);
       }
       return;
     }
