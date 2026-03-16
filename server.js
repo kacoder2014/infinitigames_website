@@ -1,6 +1,7 @@
 const http = require('http');
-const fs = require('fs');
+const fs   = require('fs');
 const path = require('path');
+const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 3000;
 
@@ -22,23 +23,19 @@ const MIME_TYPES = {
   '.mp4':  'video/mp4',
 };
 
+// ── HTTP server ──────────────────────────────────────────────
 const server = http.createServer((req, res) => {
-  // Normalize URL — strip query string, decode URI
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
-
-  // Default to index.html for root
   if (urlPath === '/') urlPath = '/index.html';
 
   const filePath = path.join(__dirname, urlPath);
 
-  // Security: prevent path traversal outside project root
   if (!filePath.startsWith(__dirname)) {
     res.writeHead(403);
     return res.end('Forbidden');
   }
 
   fs.stat(filePath, (err, stats) => {
-    // If path is a directory, try serving index.html inside it
     if (!err && stats.isDirectory()) {
       return serveFile(path.join(filePath, 'index.html'), res);
     }
@@ -52,15 +49,85 @@ function serveFile(filePath, res) {
       res.writeHead(404, { 'Content-Type': 'text/html' });
       return res.end('<h1>404 – Page Not Found</h1>');
     }
-
     const ext = path.extname(filePath).toLowerCase();
-    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-
-    res.writeHead(200, { 'Content-Type': contentType });
+    res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
     res.end(data);
   });
 }
 
+// ── WebSocket server ─────────────────────────────────────────
+const wss = new WebSocketServer({ server });
+
+// Track connected clients: ws -> { username }
+const clients = new Map();
+
+function broadcast(data, excludeWs = null) {
+  const msg = JSON.stringify(data);
+  for (const [ws] of clients) {
+    if (ws !== excludeWs && ws.readyState === ws.OPEN) {
+      ws.send(msg);
+    }
+  }
+}
+
+function broadcastAll(data) {
+  broadcast(data, null);
+}
+
+function onlineCount() {
+  return clients.size;
+}
+
+wss.on('connection', (ws) => {
+  // Assign temporary id until username is set
+  clients.set(ws, { username: null });
+
+  ws.on('message', (raw) => {
+    let msg;
+    try { msg = JSON.parse(raw); } catch { return; }
+
+    const client = clients.get(ws);
+
+    if (msg.type === 'join') {
+      // Sanitise username
+      const username = String(msg.username || '').trim().slice(0, 24) || 'Anonymous';
+      client.username = username;
+
+      // Send history / welcome back to this client only
+      ws.send(JSON.stringify({ type: 'system', text: `Welcome, ${username}! 👋`, online: onlineCount() }));
+
+      // Announce to everyone else
+      broadcast({ type: 'system', text: `${username} joined the chat`, online: onlineCount() }, ws);
+      return;
+    }
+
+    if (msg.type === 'message') {
+      if (!client.username) return; // must join first
+      const text = String(msg.text || '').trim().slice(0, 500);
+      if (!text) return;
+
+      const payload = {
+        type:     'message',
+        username: client.username,
+        text,
+        time:     new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        online:   onlineCount(),
+      };
+      broadcastAll(payload);
+      return;
+    }
+  });
+
+  ws.on('close', () => {
+    const client = clients.get(ws);
+    clients.delete(ws);
+    if (client && client.username) {
+      broadcast({ type: 'system', text: `${client.username} left the chat`, online: onlineCount() });
+    }
+  });
+});
+
+// ── Start ────────────────────────────────────────────────────
 server.listen(PORT, () => {
   console.log(`InfinitiGames server running on port ${PORT}`);
 });
