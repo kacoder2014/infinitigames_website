@@ -30,6 +30,13 @@ function getFD(username) {
   if (!friendsData[username]) friendsData[username] = { friends: [], incoming: [], outgoing: [] };
   return friendsData[username];
 }
+// Resolve any casing of a username to its registered canonical form.
+// Returns null if the user doesn't exist.
+function canonicalUser(name) {
+  if (!name) return null;
+  const key = String(name).trim().toLowerCase();
+  return users[key] ? users[key].username : null;
+}
 
 // ── Sessions ──────────────────────────────────────────────────
 const sessions = new Map();
@@ -206,9 +213,11 @@ const server = http.createServer(async (req, res) => {
 
       // They already sent us one → auto-accept
       if (myFD.incoming.some(u => u.toLowerCase() === tLow)) {
-        myFD.friends.push(target);       theirFD.friends.push(username);
-        myFD.incoming   = myFD.incoming.filter(u => u !== target);
-        theirFD.outgoing = theirFD.outgoing.filter(u => u !== username);
+        const uLow = username.toLowerCase();
+        if (!myFD.friends.some(u => u.toLowerCase() === tLow))   myFD.friends.push(target);
+        if (!theirFD.friends.some(u => u.toLowerCase() === uLow)) theirFD.friends.push(username);
+        myFD.incoming    = myFD.incoming.filter(u => u.toLowerCase() !== tLow);
+        theirFD.outgoing = theirFD.outgoing.filter(u => u.toLowerCase() !== uLow);
         saveFriends();
         sendTo(target, { type: 'friend_accepted', from: username, friends: buildFriendsList(target) });
         return json(res, 200, { ok: true, autoAccepted: true });
@@ -224,17 +233,20 @@ const server = http.createServer(async (req, res) => {
     if (url === '/api/friends/respond' && req.method === 'POST') {
       const username = sessionUser(req);
       if (!username) return json(res, 401, { error: 'Not logged in' });
-      const { from = '', accept = false } = await readBody(req);
+      const { from: fromRaw = '', accept = false } = await readBody(req);
+      const from = canonicalUser(fromRaw);
+      if (!from) return json(res, 404, { error: 'Player not found.' });
+      if (from.toLowerCase() === username.toLowerCase()) return json(res, 400, { error: 'Invalid request.' });
       const myFD = getFD(username), theirFD = getFD(from);
-      myFD.incoming   = myFD.incoming.filter(u => u !== from);
-      theirFD.outgoing = theirFD.outgoing.filter(u => u !== username);
+      const uLow = username.toLowerCase(), fLow = from.toLowerCase();
+      myFD.incoming    = myFD.incoming.filter(u => u.toLowerCase() !== fLow);
+      theirFD.outgoing = theirFD.outgoing.filter(u => u.toLowerCase() !== uLow);
       if (accept) {
-        myFD.friends.push(from);
-        theirFD.friends.push(username);
+        if (!myFD.friends.some(u => u.toLowerCase() === fLow))   myFD.friends.push(from);
+        if (!theirFD.friends.some(u => u.toLowerCase() === uLow)) theirFD.friends.push(username);
         sendTo(from, { type: 'friend_accepted', from: username, friends: buildFriendsList(from) });
-        // Send each other's current presence
-        sendTo(from,      { type: 'friend_presence', username, online: isOnline(username), game: getGame(username) });
-        sendTo(username,  { type: 'friend_presence', username: from, online: isOnline(from), game: getGame(from) });
+        sendTo(from,     { type: 'friend_presence', username, online: isOnline(username), game: getGame(username) });
+        sendTo(username, { type: 'friend_presence', username: from, online: isOnline(from), game: getGame(from) });
       }
       saveFriends();
       return json(res, 200, { ok: true });
@@ -243,10 +255,13 @@ const server = http.createServer(async (req, res) => {
     if (url === '/api/friends/remove' && req.method === 'POST') {
       const username = sessionUser(req);
       if (!username) return json(res, 401, { error: 'Not logged in' });
-      const { username: target = '' } = await readBody(req);
+      const { username: targetRaw = '' } = await readBody(req);
+      const target = canonicalUser(targetRaw);
+      if (!target) return json(res, 200, { ok: true }); // already gone, no-op
       const myFD = getFD(username), theirFD = getFD(target);
-      myFD.friends   = myFD.friends.filter(u => u !== target);
-      theirFD.friends = theirFD.friends.filter(u => u !== username);
+      const uLow = username.toLowerCase(), tLow = target.toLowerCase();
+      myFD.friends    = myFD.friends.filter(u => u.toLowerCase() !== tLow);
+      theirFD.friends = theirFD.friends.filter(u => u.toLowerCase() !== uLow);
       saveFriends();
       return json(res, 200, { ok: true });
     }
@@ -256,7 +271,8 @@ const server = http.createServer(async (req, res) => {
       const username = sessionUser(req);
       if (!username) return json(res, 200, { ok: true });
       const { game = null } = await readBody(req);
-      for (const [, c] of clients) if (c.username === username) c.game = game;
+      const uLow = username.toLowerCase();
+      for (const [, c] of clients) if (c.username && c.username.toLowerCase() === uLow) c.game = game;
       notifyFriendsPresence(username, true, game);
       return json(res, 200, { ok: true });
     }
