@@ -985,6 +985,7 @@
   let ws = null;
   let myUsername = null;
   let reconnectTimer = null;
+  let pendingJoin = null;   // username to send once socket opens
 
   // ── WebSocket ──────────────────────────────────────────────
   function wsUrl() {
@@ -992,15 +993,19 @@
     return `${proto}://${location.host}`;
   }
 
-  function connect(username) {
-    if (ws) ws.close();
+  function connect() {
+    if (ws && ws.readyState <= WebSocket.OPEN) return; // already connecting/open
     clearTimeout(reconnectTimer);
 
     ws = new WebSocket(wsUrl());
 
     ws.addEventListener('open', () => {
       chatStatus.textContent = '';
-      ws.send(JSON.stringify({ type: 'join', username }));
+      gateStatus.textContent = '';
+      if (pendingJoin) {
+        ws.send(JSON.stringify({ type: 'join', username: pendingJoin }));
+        pendingJoin = null;
+      }
     });
 
     ws.addEventListener('message', (e) => {
@@ -1017,14 +1022,20 @@
     });
 
     ws.addEventListener('close', () => {
-      chatStatus.textContent = 'Disconnected — reconnecting…';
-      reconnectTimer = setTimeout(() => connect(myUsername), 3000);
+      if (myUsername) {
+        chatStatus.textContent = 'Disconnected — reconnecting…';
+        reconnectTimer = setTimeout(() => { pendingJoin = myUsername; connect(); }, 3000);
+      } else {
+        // Not joined yet — silently retry
+        reconnectTimer = setTimeout(connect, 3000);
+      }
     });
 
-    ws.addEventListener('error', () => {
-      chatStatus.textContent = 'Connection error.';
-    });
+    ws.addEventListener('error', () => {});
   }
+
+  // Start connecting immediately on page load
+  connect();
 
   // ── DOM helpers ────────────────────────────────────────────
   function updateOnline(n) {
@@ -1082,12 +1093,17 @@
     const name = usernameInput.value.trim();
     if (!name) { gateStatus.textContent = 'Please enter a username.'; return; }
     myUsername = name;
-    gateStatus.textContent = 'Connecting…';
-    joinBtn.disabled = true;
 
-    connect(name);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      // Already connected — send join instantly
+      ws.send(JSON.stringify({ type: 'join', username: name }));
+    } else {
+      // Socket still opening — queue the join and ensure we're connecting
+      pendingJoin = name;
+      connect();
+    }
 
-    // Show chat room
+    // Show chat room immediately — no waiting for the round-trip
     gate.style.display = 'none';
     chatRoom.style.display = 'flex';
     msgInput.focus();
