@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Dodge Cars – InfinitiGames</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b12;color:#e2e8f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;user-select:none}
+h1{font-size:1.6rem;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#06b6d4,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem}
+#hud{display:flex;gap:2.5rem;font-size:.85rem;color:#94a3b8;margin-bottom:.5rem}
+#hud span strong{color:#e2e8f0;font-size:1.1rem}
+#wrap{position:relative}
+canvas{border:1px solid rgba(255,255,255,.08);border-radius:.75rem;display:block;background:#0a0f1a}
+#overlay{position:absolute;inset:0;background:rgba(8,11,18,.92);border-radius:.75rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.1rem;text-align:center;padding:2rem}
+#overlay h2{font-size:1.6rem;font-weight:800}
+#overlay p{color:#94a3b8;font-size:.9rem;max-width:260px;line-height:1.6}
+#overlay button{background:linear-gradient(135deg,#06b6d4,#7c3aed);color:#fff;border:none;padding:.7rem 2rem;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s}
+#overlay button:hover{opacity:.85}
+#touch-btns{display:none;position:fixed;bottom:1.5rem;left:0;right:0;justify-content:center;gap:3rem}
+@media(pointer:coarse){#touch-btns{display:flex}}
+.t-btn{width:70px;height:70px;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);border-radius:50%;font-size:2rem;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+</style>
+</head>
+<body>
+<h1>🚗 DODGE CARS</h1>
+<div id="hud">
+  <span>Score <strong id="scoreEl">0</strong></span>
+  <span>Best <strong id="bestEl">0</strong></span>
+  <span>Speed <strong id="speedEl">1×</strong></span>
+</div>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="overlay">
+    <div style="font-size:3.5rem">🚗</div>
+    <h2>Dodge Cars</h2>
+    <p>Use ← → arrow keys (or A/D) to dodge oncoming cars. How long can you survive?</p>
+    <button id="btn">Start Game</button>
+  </div>
+</div>
+<div id="touch-btns">
+  <div class="t-btn" id="leftBtn">◀</div>
+  <div class="t-btn" id="rightBtn">▶</div>
+</div>
+
+<script>
+const canvas  = document.getElementById('c');
+const ctx     = canvas.getContext('2d');
+const overlay = document.getElementById('overlay');
+const btn     = document.getElementById('btn');
+const scoreEl = document.getElementById('scoreEl');
+const bestEl  = document.getElementById('bestEl');
+const speedEl = document.getElementById('speedEl');
+
+const W = canvas.width  = Math.min(360, window.innerWidth - 20);
+const H = canvas.height = Math.min(500, window.innerHeight - 160);
+
+const LANE_COUNT=4;
+const LANE_W=W/LANE_COUNT;
+const ROAD_COLOR='#111827';
+const LINE_COLOR='rgba(255,255,255,.08)';
+
+const CAR_EMOJIS  =['🚕','🚙','🚌','🚐','🚑','🚓','🚒'];
+const PLAYER_EMOJI='🚗';
+const CAR_W=LANE_W-14, CAR_H=56;
+
+let player, obstacles, score, best=0, running=false, raf;
+let keys={}, frameCount=0, spawnInterval=60;
+
+function laneX(l){ return l*LANE_W + LANE_W/2; }
+
+function initGame(){
+  player={lane:1, x:laneX(1), y:H-CAR_H-20, w:CAR_W, h:CAR_H, targetX:laneX(1)};
+  obstacles=[];
+  score=0; frameCount=0; spawnInterval=60;
+  scoreEl.textContent='0';
+  speedEl.textContent='1×';
+}
+
+function spawnObstacle(){
+  const lane=Math.floor(Math.random()*LANE_COUNT);
+  const emoji=CAR_EMOJIS[Math.floor(Math.random()*CAR_EMOJIS.length)];
+  obstacles.push({lane, x:laneX(lane), y:-CAR_H, w:CAR_W, h:CAR_H, emoji});
+}
+
+function getSpeed(){
+  return 3 + score/120;
+}
+
+function update(){
+  frameCount++;
+  score++;
+  scoreEl.textContent=score;
+  const sp=getSpeed();
+  speedEl.textContent=sp.toFixed(1)+'×';
+
+  // Spawn
+  const si=Math.max(20, spawnInterval - Math.floor(score/200)*3);
+  if(frameCount%si===0) spawnObstacle();
+
+  // Move player smoothly
+  player.x += (player.targetX - player.x)*0.18;
+
+  // Move obstacles
+  obstacles.forEach(o=>o.y+=sp);
+  obstacles=obstacles.filter(o=>o.y<H+CAR_H);
+
+  // Collision
+  for(const o of obstacles){
+    const px=player.x, py=player.y;
+    const ox=o.x, oy=o.y;
+    if(Math.abs(px-ox)<CAR_W*0.55 && Math.abs(py-oy)<CAR_H*0.7){
+      endGame(); return;
+    }
+  }
+}
+
+function drawRoad(){
+  ctx.fillStyle=ROAD_COLOR;
+  ctx.fillRect(0,0,W,H);
+  // lane dividers
+  ctx.setLineDash([30,20]);
+  ctx.lineWidth=2; ctx.strokeStyle=LINE_COLOR;
+  for(let i=1;i<LANE_COUNT;i++){
+    ctx.beginPath();ctx.moveTo(i*LANE_W,0);ctx.lineTo(i*LANE_W,H);ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+function drawEmoji(emoji,x,y,size){
+  ctx.font=`${size}px serif`;
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(emoji,x,y);
+}
+
+function draw(){
+  drawRoad();
+  // player
+  drawEmoji(PLAYER_EMOJI, player.x, player.y+player.h/2, 42);
+  // obstacles
+  obstacles.forEach(o=>{
+    // slight shadow
+    ctx.shadowColor='rgba(0,0,0,.5)';ctx.shadowBlur=8;
+    drawEmoji(o.emoji, o.x, o.y+o.h/2, 40);
+    ctx.shadowBlur=0;
+  });
+}
+
+function loop(){
+  if(!running)return;
+  update();draw();
+  raf=requestAnimationFrame(loop);
+}
+
+function endGame(){
+  running=false; cancelAnimationFrame(raf);
+  if(score>best){best=score;bestEl.textContent=best;}
+  overlay.innerHTML=`
+    <div style="font-size:3rem">💥</div>
+    <h2>Game Over!</h2>
+    <p>Score: <strong style="color:#06b6d4">${score}</strong><br/>Best: <strong style="color:#10b981">${best}</strong></p>
+    <button id="btn">Play Again</button>`;
+  overlay.style.display='flex';
+  document.getElementById('btn').addEventListener('click',startGame);
+}
+
+function startGame(){
+  initGame();
+  overlay.style.display='none';
+  running=true; loop();
+}
+
+// Keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){
+    if(player.lane>0){player.lane--;player.targetX=laneX(player.lane);}
+    e.preventDefault();
+  }
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D'){
+    if(player.lane<LANE_COUNT-1){player.lane++;player.targetX=laneX(player.lane);}
+    e.preventDefault();
+  }
+});
+
+// Touch
+document.getElementById('leftBtn').addEventListener('click',()=>{
+  if(player&&player.lane>0){player.lane--;player.targetX=laneX(player.lane);}
+});
+document.getElementById('rightBtn').addEventListener('click',()=>{
+  if(player&&player.lane<LANE_COUNT-1){player.lane++;player.targetX=laneX(player.lane);}
+});
+
+// Swipe
+let touchX=null;
+canvas.addEventListener('touchstart',e=>{touchX=e.touches[0].clientX;},{passive:true});
+canvas.addEventListener('touchend',e=>{
+  if(touchX===null)return;
+  const dx=e.changedTouches[0].clientX-touchX;
+  if(Math.abs(dx)>30){
+    if(dx<0&&player.lane>0){player.lane--;player.targetX=laneX(player.lane);}
+    if(dx>0&&player.lane<LANE_COUNT-1){player.lane++;player.targetX=laneX(player.lane);}
+  }
+  touchX=null;
+},{passive:true});
+
+btn.addEventListener('click',startGame);
+</script>
+</body>
+</html>

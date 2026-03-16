@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Slot Machine – InfinitiGames</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b12;color:#e2e8f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;overflow:hidden;user-select:none}
+h1{font-size:1.8rem;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1.2rem}
+#machine{background:#0f1623;border:1px solid rgba(255,255,255,.08);border-radius:1.5rem;padding:2rem;display:flex;flex-direction:column;align-items:center;gap:1.5rem;width:min(420px,95vw);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+#coins-bar{display:flex;justify-content:space-between;width:100%;font-size:.85rem;color:#94a3b8}
+#coins-bar strong{color:#f59e0b;font-size:1.1rem}
+#reels{display:flex;gap:1rem}
+.reel-wrap{width:100px;height:120px;background:#080b12;border:2px solid rgba(255,255,255,.08);border-radius:.75rem;overflow:hidden;position:relative}
+.reel-wrap::before,.reel-wrap::after{content:'';position:absolute;left:0;right:0;height:30px;z-index:2;pointer-events:none}
+.reel-wrap::before{top:0;background:linear-gradient(to bottom,#080b12,transparent)}
+.reel-wrap::after{bottom:0;background:linear-gradient(to top,#080b12,transparent)}
+.reel-inner{display:flex;flex-direction:column;align-items:center;transition:transform .05s linear;will-change:transform}
+.symbol{height:120px;display:flex;align-items:center;justify-content:center;font-size:3.5rem;width:100px;flex-shrink:0}
+#win-line{height:3px;background:linear-gradient(90deg,transparent,#f59e0b,transparent);opacity:0;margin:0 -2rem;width:calc(100% + 4rem);transition:opacity .3s}
+#win-line.show{opacity:1;animation:glow 1s ease infinite alternate}
+@keyframes glow{from{box-shadow:0 0 5px #f59e0b}to{box-shadow:0 0 20px #f59e0b,0 0 40px #f59e0b}}
+#result-msg{height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;transition:all .3s}
+#bet-row{display:flex;align-items:center;gap:1rem;font-size:.9rem;color:#94a3b8}
+.bet-btn{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:#e2e8f0;width:30px;height:30px;border-radius:.4rem;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.bet-btn:hover{background:rgba(255,255,255,.12)}
+#betEl{color:#f59e0b;font-weight:700;font-size:1rem;min-width:40px;text-align:center}
+#spinBtn{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border:none;padding:.9rem 2.5rem;border-radius:9999px;font-size:1.1rem;font-weight:800;cursor:pointer;transition:opacity .2s,transform .1s;letter-spacing:1px;box-shadow:0 0 30px rgba(245,158,11,.4)}
+#spinBtn:hover{opacity:.9;transform:scale(1.03)}
+#spinBtn:disabled{opacity:.4;cursor:default;transform:none}
+#paytable{font-size:.72rem;color:#64748b;text-align:center;line-height:1.9}
+#paytable span{color:#94a3b8}
+#broke{display:none;flex-direction:column;align-items:center;gap:1rem;text-align:center}
+#broke h2{font-size:1.4rem}
+#broke p{color:#94a3b8;font-size:.9rem}
+</style>
+</head>
+<body>
+<h1>🎰 SLOT MACHINE</h1>
+<div id="machine">
+  <div id="coins-bar">
+    <span>Coins: <strong id="coinsEl">200</strong></span>
+    <span>Bet: <strong id="betEl">10</strong></span>
+    <span>Won: <strong id="totalWonEl" style="color:#10b981">0</strong></span>
+  </div>
+
+  <div id="reels">
+    <div class="reel-wrap"><div class="reel-inner" id="r0"></div></div>
+    <div class="reel-wrap"><div class="reel-inner" id="r1"></div></div>
+    <div class="reel-wrap"><div class="reel-inner" id="r2"></div></div>
+  </div>
+
+  <div id="win-line"></div>
+  <div id="result-msg"></div>
+
+  <div id="bet-row">
+    <button class="bet-btn" id="betDown">−</button>
+    Bet: <span id="betDisplay">10</span>
+    <button class="bet-btn" id="betUp">+</button>
+  </div>
+
+  <button id="spinBtn">🎰 SPIN</button>
+
+  <div id="paytable">
+    <span>💎💎💎</span> = 50× &nbsp;|&nbsp; <span>⭐⭐⭐</span> = 20× &nbsp;|&nbsp; <span>🔔🔔🔔</span> = 10×<br/>
+    <span>🍊🍊🍊</span> = 6× &nbsp;|&nbsp; <span>🍋🍋🍋</span> = 4× &nbsp;|&nbsp; <span>🍒🍒🍒</span> = 3×<br/>
+    Any two matching = 1.5× &nbsp;&nbsp; No match = lose bet
+  </div>
+
+  <div id="broke">
+    <h2>💸 Broke!</h2>
+    <p>You ran out of coins.</p>
+    <button id="resetBtn" class="spinBtn" style="background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border:none;padding:.7rem 1.8rem;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer">Get 200 Coins</button>
+  </div>
+</div>
+
+<script>
+const SYMBOLS  = ['🍒','🍋','🍊','🔔','⭐','💎'];
+const WEIGHTS  = [30,25,20,13,8,4]; // lower = rarer
+const MULTI    = {3:[3,4,6,10,20,50], 2:1.5};
+const STRIP_LEN= 30;
+
+let coins=200, bet=10, totalWon=0, spinning=false;
+
+const coinsEl   = document.getElementById('coinsEl');
+const betEl     = document.getElementById('betEl');
+const betDisplay= document.getElementById('betDisplay');
+const totalWonEl= document.getElementById('totalWonEl');
+const resultMsg = document.getElementById('result-msg');
+const winLine   = document.getElementById('win-line');
+const spinBtn   = document.getElementById('spinBtn');
+const brokeDiv  = document.getElementById('broke');
+
+// Build weighted pool
+const pool=[];
+SYMBOLS.forEach((s,i)=>{ for(let j=0;j<WEIGHTS[i];j++) pool.push(i); });
+
+function pick(){ return pool[Math.floor(Math.random()*pool.length)]; }
+
+// Build reel strips
+const reels=[0,1,2].map(i=>{
+  const el=document.getElementById('r'+i);
+  const strip=[];
+  for(let j=0;j<STRIP_LEN;j++){
+    const idx=pick();
+    const div=document.createElement('div');
+    div.className='symbol'; div.textContent=SYMBOLS[idx];
+    el.appendChild(div); strip.push(idx);
+  }
+  return {el, strip, offset:0};
+});
+
+function spinReel(reel, finalIdx, delay){
+  return new Promise(res=>{
+    const el=reel.el;
+    const SYM_H=120;
+    let speed=40, tick=0, total=0;
+    const target=finalIdx*SYM_H;
+
+    // Set to random start position
+    const startPos=Math.floor(Math.random()*(STRIP_LEN-5))*SYM_H;
+    el.style.transition='none';
+    el.style.transform=`translateY(-${startPos}px)`;
+
+    const go=()=>{
+      total++;
+      speed= total<15?speed : total<30?speed+1 : total<40?speed+3:speed+6;
+      if(total>50 && Math.abs((startPos + total*speed%((STRIP_LEN)*SYM_H)) - target)<speed*2){
+        el.style.transition='transform .25s cubic-bezier(.25,1,.5,1)';
+        el.style.transform=`translateY(-${target}px)`;
+        setTimeout(res, 300);
+        return;
+      }
+      const cur=startPos+total*speed;
+      el.style.transform=`translateY(-${cur % (STRIP_LEN*SYM_H)}px)`;
+      setTimeout(go, 30);
+    };
+    setTimeout(go, delay);
+  });
+}
+
+async function doSpin(){
+  if(spinning||coins<bet) return;
+  spinning=true; spinBtn.disabled=true;
+  coins-=bet; updateHUD();
+  winLine.className='win-line'; resultMsg.textContent=''; resultMsg.style.color='';
+
+  const results=[pick(),pick(),pick()];
+  const promises=results.map((idx,i)=>spinReel(reels[i], idx, i*180));
+  await Promise.all(promises);
+
+  // evaluate
+  const s=results;
+  let win=0, msg='', color='#ef4444';
+
+  if(s[0]===s[1]&&s[1]===s[2]){
+    const mult=MULTI[3][s[0]];
+    win=bet*mult;
+    msg=`🎉 THREE ${SYMBOLS[s[0]]}! ×${mult}`;
+    color='#f59e0b';
+    winLine.className='win-line show';
+  } else if(s[0]===s[1]||s[1]===s[2]||s[0]===s[2]){
+    win=Math.floor(bet*MULTI[2]);
+    msg=`✨ Two of a kind! +${win}`;
+    color='#10b981';
+  } else {
+    msg='😬 No match. Try again!';
+  }
+
+  if(win>0){ coins+=win; totalWon+=win; }
+  updateHUD();
+  resultMsg.textContent=msg; resultMsg.style.color=color;
+
+  spinning=false;
+  if(coins<Math.min(bet,10)){
+    spinBtn.disabled=true;
+    brokeDiv.style.display='flex';
+  } else {
+    spinBtn.disabled=false;
+  }
+}
+
+function updateHUD(){
+  coinsEl.textContent=coins;
+  betEl.textContent=bet;
+  betDisplay.textContent=bet;
+  totalWonEl.textContent=totalWon;
+}
+
+spinBtn.addEventListener('click',doSpin);
+document.addEventListener('keydown',e=>{ if(e.code==='Space'){e.preventDefault();doSpin();} });
+
+document.getElementById('betUp').addEventListener('click',()=>{
+  if(spinning)return;
+  bet=Math.min(bet+10,100); updateHUD();
+});
+document.getElementById('betDown').addEventListener('click',()=>{
+  if(spinning)return;
+  bet=Math.max(bet-10,10); updateHUD();
+});
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  coins=200; totalWon=0; bet=10;
+  brokeDiv.style.display='none';
+  spinBtn.disabled=false;
+  updateHUD();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Reaction Speed Test – InfinitiGames</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b12;color:#e2e8f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;user-select:none}
+h1{font-size:1.8rem;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#10b981,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:1.5rem}
+#arena{width:min(480px,90vw);height:min(360px,50vh);border-radius:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:background .25s;gap:1rem;border:2px solid rgba(255,255,255,.07);position:relative;overflow:hidden}
+#arena.waiting {background:#1a0505;border-color:rgba(239,68,68,.3)}
+#arena.ready   {background:#0a2a1a;border-color:rgba(16,185,129,.4);animation:pulse-green .6s ease infinite alternate}
+#arena.result  {background:#0f1623;border-color:rgba(6,182,212,.3)}
+#arena.idle    {background:#0f1623}
+@keyframes pulse-green{from{box-shadow:0 0 20px rgba(16,185,129,.2)} to{box-shadow:0 0 60px rgba(16,185,129,.5)}}
+#big-icon{font-size:5rem;transition:all .3s}
+#label{font-size:1.4rem;font-weight:700;text-align:center;line-height:1.5}
+#sublabel{font-size:.9rem;color:#94a3b8;text-align:center}
+#rounds{display:flex;gap:.5rem;margin-top:.5rem}
+.round-dot{width:10px;height:10px;border-radius:50%;border:2px solid #334155;background:transparent;transition:all .3s}
+.round-dot.done{background:#10b981;border-color:#10b981}
+.round-dot.current{border-color:#06b6d4}
+#results-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;margin-top:1rem;width:min(480px,90vw)}
+.r-card{background:#0f1623;border:1px solid rgba(255,255,255,.07);border-radius:.75rem;padding:.6rem;text-align:center}
+.r-card strong{display:block;font-size:1.1rem;color:#10b981}
+.r-card span{font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:1px}
+#avg-bar{text-align:center;margin-top:.75rem;font-size:1rem;color:#94a3b8}
+#avg-bar strong{font-size:1.8rem;color:#06b6d4}
+button.play-btn{background:linear-gradient(135deg,#10b981,#06b6d4);color:#fff;border:none;padding:.7rem 2rem;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s;margin-top:.5rem}
+button.play-btn:hover{opacity:.85}
+#too-soon{position:absolute;top:1rem;font-size:.85rem;color:#ef4444;font-weight:600;opacity:0;transition:opacity .3s}
+</style>
+</head>
+<body>
+<h1>⚡ REACTION TEST</h1>
+<div id="arena" class="idle">
+  <div id="too-soon">⚠️ Too soon! Wait for GREEN</div>
+  <div id="big-icon">⚡</div>
+  <div id="label">Reaction Speed Test</div>
+  <div id="sublabel">Click to start — 5 rounds</div>
+  <div id="rounds"></div>
+</div>
+<div id="results-grid" style="display:none"></div>
+<div id="avg-bar" style="display:none"></div>
+
+<script>
+const arena    = document.getElementById('arena');
+const icon     = document.getElementById('big-icon');
+const label    = document.getElementById('label');
+const sublabel = document.getElementById('sublabel');
+const roundsEl = document.getElementById('rounds');
+const tooSoon  = document.getElementById('too-soon');
+const resultsGrid = document.getElementById('results-grid');
+const avgBar      = document.getElementById('avg-bar');
+
+const ROUNDS = 5;
+let state = 'idle'; // idle | waiting | ready | done
+let times = [];
+let currentRound = 0;
+let waitTimer = null;
+let startTime = null;
+
+function renderDots(){
+  roundsEl.innerHTML='';
+  for(let i=0;i<ROUNDS;i++){
+    const d=document.createElement('div');
+    d.className='round-dot'+(i<currentRound?' done':i===currentRound?' current':'');
+    roundsEl.appendChild(d);
+  }
+}
+
+function startWaiting(){
+  state='waiting';
+  arena.className='arena waiting';
+  icon.textContent='🔴';
+  label.textContent='Wait for GREEN…';
+  sublabel.textContent='Don\'t click yet!';
+  tooSoon.style.opacity='0';
+  const delay = 1500+Math.random()*3000;
+  waitTimer=setTimeout(goGreen, delay);
+}
+
+function goGreen(){
+  state='ready';
+  arena.className='arena ready';
+  icon.textContent='🟢';
+  label.textContent='CLICK NOW!';
+  sublabel.textContent='';
+  startTime=performance.now();
+}
+
+function handleClick(){
+  if(state==='idle'){
+    times=[];currentRound=0;
+    resultsGrid.style.display='none';
+    avgBar.style.display='none';
+    renderDots();
+    startWaiting();
+    return;
+  }
+  if(state==='waiting'){
+    clearTimeout(waitTimer);
+    tooSoon.style.opacity='1';
+    setTimeout(()=>tooSoon.style.opacity='0',1200);
+    // penalty: restart this round after delay
+    state='idle';
+    setTimeout(startWaiting,1200);
+    return;
+  }
+  if(state==='ready'){
+    const ms=Math.round(performance.now()-startTime);
+    times.push(ms);
+    currentRound++;
+    renderDots();
+
+    if(currentRound>=ROUNDS){
+      showResults();
+      return;
+    }
+    // brief feedback
+    icon.textContent='✅';
+    label.textContent=`${ms} ms`;
+    sublabel.textContent='Nice! Next round…';
+    arena.className='arena result';
+    state='pause';
+    setTimeout(startWaiting,900);
+    return;
+  }
+  if(state==='done'){
+    times=[];currentRound=0;
+    resultsGrid.style.display='none';
+    avgBar.style.display='none';
+    renderDots();
+    startWaiting();
+  }
+}
+
+function showResults(){
+  state='done';
+  arena.className='arena result';
+  const avg=Math.round(times.reduce((a,b)=>a+b,0)/times.length);
+  const best=Math.min(...times);
+
+  let rating='';
+  if(avg<200)      rating='🏆 Inhuman!';
+  else if(avg<250) rating='🔥 Pro Gamer';
+  else if(avg<300) rating='⚡ Fast';
+  else if(avg<400) rating='👍 Average';
+  else             rating='🐢 Keep Practicing';
+
+  icon.textContent='🏁';
+  label.textContent=rating;
+  sublabel.textContent='Click to play again';
+
+  resultsGrid.style.display='grid';
+  resultsGrid.innerHTML=times.map((t,i)=>`
+    <div class="r-card"><strong>${t}ms</strong><span>Round ${i+1}</span></div>`).join('');
+
+  avgBar.style.display='block';
+  avgBar.innerHTML=`Average: <strong>${avg}ms</strong> &nbsp;|&nbsp; Best: <strong style="color:#10b981">${best}ms</strong>`;
+}
+
+arena.addEventListener('click',handleClick);
+document.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();handleClick();}});
+renderDots();
+</script>
+</body>
+</html>

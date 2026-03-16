@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Aim Trainer – InfinitiGames</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b12;color:#e2e8f0;font-family:'Segoe UI',sans-serif;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;user-select:none}
+h1{font-size:2rem;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.4rem}
+#ui{text-align:center;display:flex;flex-direction:column;align-items:center;gap:1rem}
+#stats{display:flex;gap:2rem;font-size:.9rem;color:#94a3b8}
+#stats span{display:flex;flex-direction:column;align-items:center;gap:.2rem}
+#stats strong{font-size:1.5rem;color:#e2e8f0;font-weight:700}
+#arena{position:relative;width:min(700px,95vw);height:min(420px,55vh);background:#0f1623;border:1px solid rgba(255,255,255,.07);border-radius:1rem;overflow:hidden;cursor:crosshair;margin-top:.5rem}
+#timer-bar{position:absolute;top:0;left:0;height:4px;background:linear-gradient(90deg,#ef4444,#f59e0b);transition:width .1s linear;width:100%}
+.target{position:absolute;border-radius:50%;transform:translate(-50%,-50%);cursor:crosshair;transition:transform .08s;display:flex;align-items:center;justify-content:center}
+.target:hover{transform:translate(-50%,-50%) scale(1.1)}
+.target::after{content:'';position:absolute;border-radius:50%;width:40%;height:40%;background:rgba(255,255,255,.35)}
+.ripple{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.5);transform:translate(-50%,-50%) scale(0);animation:ripple .4s ease-out forwards;pointer-events:none}
+@keyframes ripple{to{transform:translate(-50%,-50%) scale(3);opacity:0}}
+#overlay{position:absolute;inset:0;background:rgba(8,11,18,.92);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.2rem;border-radius:1rem}
+#overlay h2{font-size:1.8rem;font-weight:800}
+#overlay p{color:#94a3b8;font-size:.95rem;max-width:300px;text-align:center;line-height:1.6}
+#overlay .result-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;text-align:center}
+#overlay .result-grid div{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:.75rem;padding:.75rem 1rem}
+#overlay .result-grid strong{display:block;font-size:1.4rem;font-weight:700;color:#f59e0b}
+#overlay .result-grid span{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:1px}
+btn,#startBtn,#retryBtn{background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff;border:none;padding:.75rem 2rem;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s}
+#startBtn:hover,#retryBtn:hover{opacity:.85}
+#miss-flash{position:absolute;inset:0;background:rgba(239,68,68,.15);opacity:0;border-radius:1rem;pointer-events:none;transition:opacity .1s}
+</style>
+</head>
+<body>
+<div id="ui">
+  <h1>🎯 AIM TRAINER</h1>
+  <div id="stats">
+    <span><strong id="scoreEl">0</strong>Score</span>
+    <span><strong id="timeEl">30</strong>Time</span>
+    <span><strong id="accEl">—</strong>Accuracy</span>
+    <span><strong id="avgEl">—</strong>Avg ms</span>
+  </div>
+  <div id="arena">
+    <div id="timer-bar"></div>
+    <div id="miss-flash"></div>
+    <div id="overlay">
+      <h2>🎯 Aim Trainer</h2>
+      <p>Click targets as fast as you can. You have <strong>30 seconds</strong>. How many can you hit?</p>
+      <button id="startBtn">Start Game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const arena    = document.getElementById('arena');
+const timerBar = document.getElementById('timer-bar');
+const overlay  = document.getElementById('overlay');
+const scoreEl  = document.getElementById('scoreEl');
+const timeEl   = document.getElementById('timeEl');
+const accEl    = document.getElementById('accEl');
+const avgEl    = document.getElementById('avgEl');
+const missFlash= document.getElementById('miss-flash');
+const startBtn = document.getElementById('startBtn');
+
+const DURATION = 30;
+const COLORS   = ['#ef4444','#f59e0b','#10b981','#06b6d4','#7c3aed','#ec4899'];
+
+let score=0, clicks=0, hits=0, times=[], running=false;
+let spawnTimer, countdown, targetStart, currentTarget=null;
+let timeLeft = DURATION;
+
+function rnd(min,max){return Math.random()*(max-min)+min}
+
+function spawnTarget(){
+  if(currentTarget) currentTarget.remove();
+  const size = rnd(30,70);
+  const t = document.createElement('div');
+  t.className = 'target';
+  const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+  t.style.cssText = `width:${size}px;height:${size}px;background:${color};
+    left:${rnd(size,arena.clientWidth-size)}px;top:${rnd(size+10,arena.clientHeight-size)}px;
+    box-shadow:0 0 ${size/2}px ${color}55`;
+  t.addEventListener('click', hitTarget);
+  arena.appendChild(t);
+  currentTarget = t;
+  targetStart = performance.now();
+
+  // auto-miss after 2.5s
+  t._timeout = setTimeout(()=>{ if(t===currentTarget){ flashMiss(); spawnTarget(); } }, 2500);
+}
+
+function hitTarget(e){
+  e.stopPropagation();
+  const ms = Math.round(performance.now()-targetStart);
+  clearTimeout(currentTarget._timeout);
+  score++; hits++; clicks++;
+  times.push(ms);
+  updateStats();
+  addRipple(e.clientX, e.clientY);
+  currentTarget.remove(); currentTarget=null;
+  spawnTarget();
+}
+
+function flashMiss(){
+  missFlash.style.opacity='1';
+  setTimeout(()=>missFlash.style.opacity='0',120);
+}
+
+arena.addEventListener('click', e=>{
+  if(!running||e.target!==arena&&e.target.id!=='miss-flash'&&e.target.id!=='timer-bar') return;
+  if(e.target===arena||e.target.id==='miss-flash'){
+    clicks++; flashMiss(); updateStats();
+  }
+});
+
+function addRipple(cx,cy){
+  const r=document.createElement('div');
+  r.className='ripple';
+  const rect=arena.getBoundingClientRect();
+  r.style.left=(cx-rect.left)+'px';
+  r.style.top=(cy-rect.top)+'px';
+  r.style.width='60px';r.style.height='60px';
+  arena.appendChild(r);
+  r.addEventListener('animationend',()=>r.remove());
+}
+
+function updateStats(){
+  scoreEl.textContent=score;
+  accEl.textContent = clicks?Math.round(hits/clicks*100)+'%':'—';
+  avgEl.textContent  = times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length)+'ms':'—';
+}
+
+function startGame(){
+  score=0;clicks=0;hits=0;times=[];timeLeft=DURATION;running=true;
+  scoreEl.textContent='0';accEl.textContent='—';avgEl.textContent='—';
+  overlay.style.display='none';
+  timerBar.style.width='100%';
+  spawnTarget();
+  countdown=setInterval(()=>{
+    timeLeft--;
+    timeEl.textContent=timeLeft;
+    timerBar.style.width=(timeLeft/DURATION*100)+'%';
+    if(timeLeft<=0) endGame();
+  },1000);
+}
+
+function endGame(){
+  clearInterval(countdown);
+  running=false;
+  if(currentTarget){ clearTimeout(currentTarget._timeout); currentTarget.remove(); currentTarget=null; }
+  const avg = times.length?Math.round(times.reduce((a,b)=>a+b,0)/times.length):0;
+  const acc = clicks?Math.round(hits/clicks*100):0;
+  overlay.innerHTML=`
+    <h2>⏱ Time's Up!</h2>
+    <div class="result-grid">
+      <div><strong>${score}</strong><span>Targets Hit</span></div>
+      <div><strong>${acc}%</strong><span>Accuracy</span></div>
+      <div><strong>${avg}ms</strong><span>Avg Speed</span></div>
+    </div>
+    <button id="retryBtn">Play Again</button>
+  `;
+  overlay.style.display='flex';
+  document.getElementById('retryBtn').addEventListener('click',startGame);
+}
+
+startBtn.addEventListener('click',startGame);
+</script>
+</body>
+</html>

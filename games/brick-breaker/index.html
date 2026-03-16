@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Brick Breaker – InfinitiGames</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080b12;color:#e2e8f0;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;overflow:hidden;user-select:none}
+h1{font-size:1.6rem;font-weight:900;letter-spacing:2px;background:linear-gradient(135deg,#7c3aed,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:.5rem}
+#hud{display:flex;gap:2.5rem;font-size:.85rem;color:#94a3b8;margin-bottom:.5rem}
+#hud span strong{color:#e2e8f0;font-size:1.1rem}
+canvas{border:1px solid rgba(255,255,255,.08);border-radius:.75rem;display:block;background:#0a0f1a}
+#msg{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;background:rgba(8,11,18,.92);border-radius:.75rem;padding:2rem 3rem;text-align:center}
+#msg h2{font-size:1.6rem;font-weight:800}
+#msg p{color:#94a3b8;font-size:.9rem}
+#msg button{background:linear-gradient(135deg,#7c3aed,#06b6d4);color:#fff;border:none;padding:.7rem 2rem;border-radius:9999px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .2s}
+#msg button:hover{opacity:.85}
+#wrap{position:relative}
+</style>
+</head>
+<body>
+<h1>🧱 BRICK BREAKER</h1>
+<div id="hud">
+  <span>Score <strong id="scoreEl">0</strong></span>
+  <span>Level <strong id="levelEl">1</strong></span>
+  <span>Lives <strong id="livesEl">❤️❤️❤️</strong></span>
+</div>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="msg">
+    <h2>🧱 Brick Breaker</h2>
+    <p>Move mouse or use ← → arrows.<br/>Don't let the ball fall!</p>
+    <button id="btn">Start Game</button>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const msg    = document.getElementById('msg');
+const btn    = document.getElementById('btn');
+const scoreEl= document.getElementById('scoreEl');
+const levelEl= document.getElementById('levelEl');
+const livesEl= document.getElementById('livesEl');
+
+const W = canvas.width  = Math.min(520, window.innerWidth - 20);
+const H = canvas.height = Math.min(460, window.innerHeight - 160);
+
+const PADDLE_H=12, PADDLE_W=W*.18;
+const BALL_R=8;
+const ROWS=5, COLS=Math.floor(W/58), BRICK_H=20, GAP=5;
+const BRICK_W=(W - GAP*(COLS+1)) / COLS;
+const COLORS=['#7c3aed','#2563eb','#06b6d4','#10b981','#f59e0b','#ef4444'];
+
+let paddle,ball,bricks,score,lives,level,running,raf;
+
+function initLevel(){
+  bricks=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    bricks.push({
+      x: GAP + c*(BRICK_W+GAP),
+      y: 50 + r*(BRICK_H+GAP),
+      alive:true,
+      color:COLORS[r%COLORS.length],
+      hp: r<2?1:r<4?2:3
+    });
+  }
+}
+
+function initGame(){
+  score=0;lives=3;level=1;
+  paddle={x:W/2-PADDLE_W/2, y:H-30, w:PADDLE_W, h:PADDLE_H};
+  ball={x:W/2, y:H-60, dx:3.5, dy:-3.5, r:BALL_R};
+  initLevel();
+  updateHUD();
+}
+
+function updateHUD(){
+  scoreEl.textContent=score;
+  levelEl.textContent=level;
+  livesEl.textContent='❤️'.repeat(lives);
+}
+
+function drawPaddle(){
+  const g=ctx.createLinearGradient(paddle.x,0,paddle.x+paddle.w,0);
+  g.addColorStop(0,'#7c3aed');g.addColorStop(1,'#06b6d4');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.roundRect(paddle.x,paddle.y,paddle.w,paddle.h,6);
+  ctx.fill();
+  ctx.shadowColor='#06b6d4';ctx.shadowBlur=12;ctx.fill();ctx.shadowBlur=0;
+}
+
+function drawBall(){
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+  ctx.fillStyle='#fff';
+  ctx.shadowColor='#ffffff';ctx.shadowBlur=16;
+  ctx.fill();ctx.shadowBlur=0;
+}
+
+function drawBricks(){
+  bricks.forEach(b=>{
+    if(!b.alive)return;
+    ctx.fillStyle=b.color;
+    ctx.shadowColor=b.color;ctx.shadowBlur=6;
+    ctx.beginPath();
+    ctx.roundRect(b.x,b.y,BRICK_W,BRICK_H,4);
+    ctx.fill();
+    // hp indicator
+    if(b.hp>1){
+      ctx.fillStyle='rgba(255,255,255,.25)';
+      ctx.fillRect(b.x+2,b.y+2,BRICK_W*((b.hp-1)/2)-4,BRICK_H-4);
+    }
+    ctx.shadowBlur=0;
+  });
+}
+
+function update(){
+  ball.x+=ball.dx; ball.y+=ball.dy;
+  // walls
+  if(ball.x-ball.r<0){ball.x=ball.r;ball.dx*=-1;}
+  if(ball.x+ball.r>W){ball.x=W-ball.r;ball.dx*=-1;}
+  if(ball.y-ball.r<0){ball.y=ball.r;ball.dy*=-1;}
+  // paddle
+  if(ball.dy>0 && ball.y+ball.r>=paddle.y && ball.y+ball.r<=paddle.y+paddle.h
+     && ball.x>=paddle.x && ball.x<=paddle.x+paddle.w){
+    const rel=(ball.x-(paddle.x+paddle.w/2))/(paddle.w/2);
+    const angle=rel*65*(Math.PI/180);
+    const speed=Math.sqrt(ball.dx*ball.dx+ball.dy*ball.dy);
+    ball.dx=speed*Math.sin(angle);
+    ball.dy=-speed*Math.cos(angle);
+    ball.y=paddle.y-ball.r;
+  }
+  // bricks
+  bricks.forEach(b=>{
+    if(!b.alive)return;
+    if(ball.x+ball.r>b.x && ball.x-ball.r<b.x+BRICK_W &&
+       ball.y+ball.r>b.y && ball.y-ball.r<b.y+BRICK_H){
+      b.hp--;
+      if(b.hp<=0){b.alive=false;score+=10;}
+      else score+=2;
+      ball.dy*=-1;
+      updateHUD();
+    }
+  });
+  // fall
+  if(ball.y>H+ball.r){
+    lives--;
+    updateHUD();
+    if(lives<=0){endGame(false);return;}
+    ball.x=W/2;ball.y=H-60;
+    ball.dx=3.5*(Math.random()>.5?1:-1);ball.dy=-3.5;
+  }
+  // next level
+  if(bricks.every(b=>!b.alive)){
+    level++;updateHUD();
+    initLevel();
+    const sp=Math.sqrt(ball.dx*ball.dx+ball.dy*ball.dy)+.4;
+    ball.dx=sp*(ball.dx>0?1:-1);ball.dy=-Math.abs(ball.dy)-0.4;
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  drawBricks();drawPaddle();drawBall();
+}
+
+function loop(){
+  if(!running)return;
+  update();draw();
+  raf=requestAnimationFrame(loop);
+}
+
+function endGame(won){
+  running=false;
+  cancelAnimationFrame(raf);
+  msg.innerHTML=`<h2>${won?'🏆 You Win!':'💀 Game Over'}</h2>
+    <p>Score: <strong>${score}</strong> | Level: <strong>${level}</strong></p>
+    <button id="btn">Play Again</button>`;
+  msg.style.display='flex';
+  document.getElementById('btn').addEventListener('click',startGame);
+}
+
+function startGame(){
+  initGame();
+  msg.style.display='none';
+  running=true;
+  loop();
+}
+
+// Controls
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  paddle.x=Math.max(0,Math.min(W-paddle.w, e.clientX-rect.left-paddle.w/2));
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')  paddle.x=Math.max(0,paddle.x-24);
+  if(e.key==='ArrowRight') paddle.x=Math.min(W-paddle.w,paddle.x+24);
+});
+
+btn.addEventListener('click',startGame);
+</script>
+</body>
+</html>
