@@ -711,6 +711,187 @@
       flex-shrink: 0;
     }
 
+    /* ── Friends panel ── */
+    #friendsBtn {
+      position: relative;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .4rem .9rem;
+      border-radius: 9999px;
+      font-size: .82rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      display: flex; align-items: center; gap: .4rem;
+      transition: background .2s;
+    }
+    #friendsBtn:hover { background: rgba(255,255,255,.1); }
+    #friendsBadge {
+      background: #ef4444;
+      color: #fff;
+      font-size: .65rem;
+      font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: 9999px;
+      display: none;
+      align-items: center; justify-content: center;
+      padding: 0 4px;
+    }
+    #friendsBadge.show { display: flex; }
+
+    #friendsPanel {
+      position: fixed;
+      top: 64px; right: 0;
+      width: 320px;
+      height: calc(100vh - 64px);
+      background: #0c1120;
+      border-left: 1px solid var(--border);
+      z-index: 200;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform .25s cubic-bezier(.4,0,.2,1);
+    }
+    #friendsPanel.open { transform: translateX(0); }
+
+    .fp-header {
+      padding: 1rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .fp-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: .95rem; font-weight: 700;
+    }
+    .fp-close {
+      background: none; border: none; color: var(--muted);
+      font-size: 1.2rem; cursor: pointer; padding: .2rem;
+      transition: color .2s;
+    }
+    .fp-close:hover { color: var(--text); }
+
+    .fp-search {
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex; gap: .5rem;
+    }
+    .fp-search input {
+      flex: 1;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: .5rem;
+      color: var(--text);
+      font-size: .82rem;
+      padding: .5rem .75rem;
+      outline: none;
+      font-family: inherit;
+      transition: border-color .2s;
+    }
+    .fp-search input:focus { border-color: rgba(124,58,237,.4); }
+    .fp-search input::placeholder { color: var(--muted); }
+    .fp-search button {
+      background: linear-gradient(135deg, var(--accent1), var(--accent2));
+      border: none; color: #fff;
+      padding: .5rem .85rem;
+      border-radius: .5rem;
+      font-size: .78rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      white-space: nowrap;
+      transition: opacity .2s;
+    }
+    .fp-search button:hover { opacity: .85; }
+
+    .fp-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .fp-tab {
+      flex: 1; padding: .6rem;
+      background: none; border: none;
+      color: var(--muted); font-size: .82rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      border-bottom: 2px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+    .fp-tab.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+
+    .fp-body {
+      flex: 1; overflow-y: auto;
+      padding: .5rem .75rem;
+    }
+    .fp-body::-webkit-scrollbar { width: 3px; }
+    .fp-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+
+    .fp-section-label {
+      font-size: .68rem; font-weight: 700; letter-spacing: 1.5px;
+      text-transform: uppercase; color: var(--muted);
+      padding: .5rem .25rem .3rem;
+    }
+
+    .fp-empty {
+      text-align: center; color: var(--muted);
+      font-size: .82rem; padding: 2rem 1rem;
+    }
+
+    .friend-card {
+      display: flex; align-items: center; gap: .65rem;
+      padding: .55rem .5rem;
+      border-radius: .65rem;
+      transition: background .15s;
+    }
+    .friend-card:hover { background: rgba(255,255,255,.04); }
+
+    .friend-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .85rem; font-weight: 700;
+      flex-shrink: 0; position: relative;
+    }
+    .friend-status-dot {
+      position: absolute; bottom: 0; right: 0;
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid #0c1120;
+      background: var(--muted);
+    }
+    .friend-status-dot.online  { background: var(--accent4); }
+    .friend-status-dot.ingame  { background: var(--accent3); }
+
+    .friend-info { flex: 1; min-width: 0; }
+    .friend-name { font-size: .85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .friend-sub  { font-size: .72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .friend-sub .game-name { color: var(--accent3); }
+
+    .friend-actions { display: flex; gap: .3rem; flex-shrink: 0; }
+    .fa-btn {
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: .3rem .6rem;
+      border-radius: .4rem;
+      font-size: .72rem; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .fa-btn:hover { background: rgba(255,255,255,.12); }
+    .fa-btn.join  { background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.3); color: #34d399; }
+    .fa-btn.join:hover { background: rgba(16,185,129,.25); }
+    .fa-btn.accept { background: rgba(16,185,129,.15); border-color: rgba(16,185,129,.3); color: #34d399; }
+    .fa-btn.decline { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.25); color: #f87171; }
+    .fa-btn.remove  { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.25); color: #f87171; }
+    .fa-btn.pending { color: var(--muted); cursor: default; }
+
+    .fp-search-result {
+      font-size: .75rem; color: var(--muted);
+      padding: .4rem .25rem;
+      min-height: 1.5rem;
+    }
+    .fp-search-result.ok  { color: var(--accent4); }
+    .fp-search-result.err { color: #f87171; }
+
     /* ── Auth modal ── */
     #authOverlay {
       position: fixed; inset: 0; z-index: 999;
@@ -891,8 +1072,10 @@
     <li><a href="#chat">Chat</a></li>
     <li><a href="#leaderboard">Leaderboard</a></li>
   </ul>
-  <div id="navUserArea">
-    <!-- Filled by JS -->
+  <div id="navUserArea" style="display:flex;align-items:center;gap:.6rem;">
+    <button id="friendsBtn" style="display:none" onclick="toggleFriendsPanel()">
+      👥 Friends <span id="friendsBadge"></span>
+    </button>
     <a href="#" class="nav-cta" id="navJoinBtn">Join Free</a>
   </div>
 </nav>
@@ -1056,6 +1239,24 @@
   </div>
 </section>
 
+<!-- FRIENDS PANEL -->
+<div id="friendsPanel">
+  <div class="fp-header">
+    <span class="fp-title">👥 Friends</span>
+    <button class="fp-close" onclick="toggleFriendsPanel()">✕</button>
+  </div>
+  <div class="fp-search">
+    <input id="fpSearchInput" placeholder="Find a player…" maxlength="24" autocomplete="off" />
+    <button id="fpSearchBtn">Add</button>
+  </div>
+  <div class="fp-search-result" id="fpSearchResult"></div>
+  <div class="fp-tabs">
+    <button class="fp-tab active" id="tabFriends" onclick="switchFPTab('friends')">Friends</button>
+    <button class="fp-tab" id="tabRequests" onclick="switchFPTab('requests')">Requests <span id="reqCount"></span></button>
+  </div>
+  <div class="fp-body" id="fpBody"></div>
+</div>
+
 <!-- AUTH MODAL -->
 <div id="authOverlay" style="display:none">
   <div id="authCard">
@@ -1168,13 +1369,18 @@
   function renderNav() {
     if (currentUser) {
       const [,fg] = colorFor(currentUser);
+      document.getElementById('friendsBtn').style.display = 'flex';
       navUserArea.innerHTML = `
+        <button id="friendsBtn" onclick="toggleFriendsPanel()" style="display:flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);color:#e2e8f0;padding:.4rem .9rem;border-radius:9999px;font-size:.82rem;font-weight:600;cursor:pointer;font-family:inherit;">
+          👥 Friends <span id="friendsBadge" style="background:#ef4444;color:#fff;font-size:.65rem;font-weight:700;min-width:16px;height:16px;border-radius:9999px;display:none;align-items:center;justify-content:center;padding:0 4px;"></span>
+        </button>
         <div id="navUsername">
           <div class="avatar-sm" style="background:linear-gradient(135deg,${fg},#06b6d4)">${esc(currentUser.charAt(0).toUpperCase())}</div>
           ${esc(currentUser)}
         </div>
         <button id="logoutBtn">Log out</button>`;
       document.getElementById('logoutBtn').addEventListener('click', doLogout);
+      if (typeof loadFriends === 'function') loadFriends();
     } else {
       navUserArea.innerHTML = `<a href="#" class="nav-cta" id="navJoinBtn">Join Free</a>`;
       document.getElementById('navJoinBtn').addEventListener('click', e => { e.preventDefault(); showModal(); });
@@ -1312,9 +1518,11 @@
     ws.addEventListener('message', e => {
       let d; try { d = JSON.parse(e.data); } catch { return; }
       if (d.online != null) onlineBadge.textContent = d.online + ' online';
-      if (d.type === 'joined')  { /* server confirmed, nothing extra needed */ }
       if (d.type === 'system')  appendSystem(d.text);
       if (d.type === 'message') appendMessage(d.username, d.text, d.time, d.username === currentUser);
+      // Route friend events to the friends module
+      if (['friend_request','friend_accepted','friends_update','friend_presence'].includes(d.type))
+        window.handleFriendWS && window.handleFriendWS(d);
     });
 
     ws.addEventListener('close', () => {
@@ -1366,6 +1574,276 @@
 
 })();
 </script>
+
+<!-- FRIENDS + PRESENCE SCRIPT -->
+<script>
+/* ═══════════════════════════════════════════════════════
+   Friends system
+   ═══════════════════════════════════════════════════════ */
+const GAME_MAP = {
+  'ClashOfClans.html':              { name: 'Clash of Clans',  icon: '⚔️' },
+  'TheGreatestObby.htm':            { name: 'Obby',            icon: '🏃' },
+  'games/aim-trainer/index.html':   { name: 'Aim Trainer',     icon: '🎯' },
+  'games/reaction/index.html':      { name: 'Reaction Test',   icon: '⚡' },
+  'games/slots/index.html':         { name: 'Slot Machine',    icon: '🎰' },
+  'games/dodge-cars/index.html':    { name: 'Dodge Cars',      icon: '🚗' },
+};
+
+const AVATAR_COLORS2 = [
+  ['rgba(124,58,237,.35)','#a78bfa'],['rgba(6,182,212,.35)','#22d3ee'],
+  ['rgba(16,185,129,.35)','#34d399'],['rgba(245,158,11,.35)','#fbbf24'],
+  ['rgba(239,68,68,.35)','#f87171'], ['rgba(236,72,153,.35)','#f472b6'],
+  ['rgba(234,88,12,.35)','#fb923c'],
+];
+function fColor(name) {
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS2[h % AVATAR_COLORS2.length];
+}
+function fEsc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// State
+let fpData = { friends: [], incoming: [], outgoing: [] };
+let fpTab  = 'friends';
+let fpOpen = false;
+
+function toggleFriendsPanel() {
+  fpOpen = !fpOpen;
+  document.getElementById('friendsPanel').classList.toggle('open', fpOpen);
+  if (fpOpen) loadFriends();
+}
+
+function switchFPTab(tab) {
+  fpTab = tab;
+  document.getElementById('tabFriends').classList.toggle('active', tab === 'friends');
+  document.getElementById('tabRequests').classList.toggle('active', tab === 'requests');
+  renderFP();
+}
+
+async function loadFriends() {
+  try {
+    const r = await fetch('/api/friends');
+    if (!r.ok) return;
+    fpData = await r.json();
+    renderFP();
+    updateBadge();
+  } catch {}
+}
+
+function updateBadge() {
+  const badge = document.getElementById('friendsBadge');
+  const count = fpData.incoming.length;
+  badge.textContent = count;
+  badge.classList.toggle('show', count > 0);
+  const rc = document.getElementById('reqCount');
+  if (rc) rc.textContent = count ? `(${count})` : '';
+}
+
+function renderFP() {
+  const body = document.getElementById('fpBody');
+  if (!body) return;
+
+  if (fpTab === 'friends') {
+    const online  = fpData.friends.filter(f => f.online);
+    const offline = fpData.friends.filter(f => !f.online);
+    let html = '';
+
+    if (!fpData.friends.length) {
+      html = `<div class="fp-empty">No friends yet.<br/>Search for players above to add them!</div>`;
+    } else {
+      if (online.length)  html += `<div class="fp-section-label">🟢 Online — ${online.length}</div>`  + online.map(friendCard).join('');
+      if (offline.length) html += `<div class="fp-section-label">⚫ Offline — ${offline.length}</div>` + offline.map(friendCard).join('');
+    }
+    body.innerHTML = html;
+
+  } else {
+    let html = '';
+    if (!fpData.incoming.length && !fpData.outgoing.length) {
+      html = `<div class="fp-empty">No pending requests.</div>`;
+    }
+    if (fpData.incoming.length) {
+      html += `<div class="fp-section-label">📥 Incoming</div>`;
+      html += fpData.incoming.map(u => requestCard(u, 'incoming')).join('');
+    }
+    if (fpData.outgoing.length) {
+      html += `<div class="fp-section-label">📤 Sent</div>`;
+      html += fpData.outgoing.map(u => requestCard(u, 'outgoing')).join('');
+    }
+    body.innerHTML = html;
+  }
+}
+
+function friendCard(f) {
+  const [bg, fg] = fColor(f.username);
+  const initial = fEsc(f.username.charAt(0).toUpperCase());
+  const gameInfo = f.game ? GAME_MAP[f.game] : null;
+  const statusClass = f.online ? (f.game ? 'ingame' : 'online') : '';
+  const sub = f.game && gameInfo
+    ? `Playing <span class="game-name">${fEsc(gameInfo.icon)} ${fEsc(gameInfo.name)}</span>`
+    : f.online ? 'Online' : 'Offline';
+
+  const joinBtn = (f.online && f.game)
+    ? `<button class="fa-btn join" onclick="joinFriend('${fEsc(f.game)}')">▶ Join</button>`
+    : '';
+
+  return `<div class="friend-card">
+    <div class="friend-avatar" style="background:${bg};color:${fg};">
+      ${initial}<div class="friend-status-dot ${statusClass}"></div>
+    </div>
+    <div class="friend-info">
+      <div class="friend-name">${fEsc(f.username)}</div>
+      <div class="friend-sub">${sub}</div>
+    </div>
+    <div class="friend-actions">
+      ${joinBtn}
+      <button class="fa-btn remove" onclick="removeFriend('${fEsc(f.username)}')">✕</button>
+    </div>
+  </div>`;
+}
+
+function requestCard(username, dir) {
+  const [bg, fg] = fColor(username);
+  const initial = fEsc(username.charAt(0).toUpperCase());
+  const actions = dir === 'incoming'
+    ? `<button class="fa-btn accept"  onclick="respondRequest('${fEsc(username)}', true)">✓ Accept</button>
+       <button class="fa-btn decline" onclick="respondRequest('${fEsc(username)}', false)">✕</button>`
+    : `<button class="fa-btn pending">Pending…</button>`;
+
+  return `<div class="friend-card">
+    <div class="friend-avatar" style="background:${bg};color:${fg};">${initial}</div>
+    <div class="friend-info">
+      <div class="friend-name">${fEsc(username)}</div>
+      <div class="friend-sub">${dir === 'incoming' ? 'Wants to be friends' : 'Request sent'}</div>
+    </div>
+    <div class="friend-actions">${actions}</div>
+  </div>`;
+}
+
+function joinFriend(gameHref) {
+  // Report our own presence to the game we're joining
+  setPresence(gameHref);
+  window.open(gameHref, '_blank');
+}
+
+async function sendFriendRequest() {
+  const input  = document.getElementById('fpSearchInput');
+  const result = document.getElementById('fpSearchResult');
+  const to = input.value.trim();
+  if (!to) return;
+  result.className = 'fp-search-result';
+  result.textContent = 'Sending…';
+  try {
+    const r = await fetch('/api/friends/request', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ to })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      result.className = 'fp-search-result ok';
+      result.textContent = d.autoAccepted ? `✓ You're now friends with ${to}!` : `✓ Request sent to ${to}!`;
+      input.value = '';
+      await loadFriends();
+    } else {
+      result.className = 'fp-search-result err';
+      result.textContent = '✕ ' + d.error;
+    }
+  } catch {
+    result.className = 'fp-search-result err';
+    result.textContent = '✕ Network error.';
+  }
+}
+
+async function respondRequest(from, accept) {
+  await fetch('/api/friends/respond', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ from, accept })
+  });
+  await loadFriends();
+}
+
+async function removeFriend(username) {
+  await fetch('/api/friends/remove', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username })
+  });
+  await loadFriends();
+}
+
+// ── Presence ───────────────────────────────────────────────
+function setPresence(gameHref) {
+  if (!window._currentUser) return;
+  fetch('/api/presence', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ game: gameHref })
+  });
+}
+
+// Attach presence tracking to all game cards
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('a.card, a.card-launch').forEach(el => {
+    el.addEventListener('click', () => {
+      const href = el.getAttribute('href');
+      if (href && GAME_MAP[href]) setPresence(href);
+    });
+  });
+});
+
+// ── Search button + enter key ──────────────────────────────
+document.getElementById('fpSearchBtn').addEventListener('click', sendFriendRequest);
+document.getElementById('fpSearchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendFriendRequest();
+});
+
+// ── Handle WS friend events (called from chat script) ─────
+window.handleFriendWS = function(data) {
+  if (data.type === 'friend_request') {
+    fpData.incoming = fpData.incoming.includes(data.from) ? fpData.incoming : [...fpData.incoming, data.from];
+    updateBadge();
+    if (fpOpen && fpTab === 'requests') renderFP();
+    // Toast notification
+    showFriendToast(`👥 ${data.from} sent you a friend request!`);
+  }
+  if (data.type === 'friend_accepted') {
+    showFriendToast(`✅ ${data.from} accepted your friend request!`);
+    if (data.friends) fpData.friends = data.friends;
+    fpData.outgoing = fpData.outgoing.filter(u => u !== data.from);
+    if (fpOpen) renderFP();
+    else loadFriends();
+  }
+  if (data.type === 'friends_update') {
+    fpData.friends = data.friends;
+    if (fpOpen && fpTab === 'friends') renderFP();
+  }
+  if (data.type === 'friend_presence') {
+    const f = fpData.friends.find(x => x.username === data.username);
+    if (f) { f.online = data.online; f.game = data.game; }
+    if (fpOpen && fpTab === 'friends') renderFP();
+  }
+};
+
+function showFriendToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
+    background:#0f1623;border:1px solid rgba(124,58,237,.4);color:#e2e8f0;
+    padding:.7rem 1.4rem;border-radius:9999px;font-size:.85rem;font-weight:600;
+    z-index:999;box-shadow:0 8px 30px rgba(0,0,0,.5);
+    animation:fadeInUp .3s ease;pointer-events:none`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// Expose currentUser to presence system
+Object.defineProperty(window, '_currentUser', {
+  get() { return typeof currentUser !== 'undefined' ? currentUser : null; }
+});
+</script>
+
+<style>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+</style>
 
 <!-- FOOTER -->
 <footer>
