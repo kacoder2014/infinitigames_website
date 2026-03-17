@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Blox Fruits</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; display: flex; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = 900;
+canvas.height = 640;
+
+// ─── COLOR HELPERS ────────────────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return {r,g,b};
+}
+function shiftHex(hex, amt) {
+  const c = hexToRgb(hex);
+  return `rgb(${Math.min(255,Math.max(0,c.r+amt))},${Math.min(255,Math.max(0,c.g+amt))},${Math.min(255,Math.max(0,c.b+amt))})`;
+}
+function lighten(h,a){return shiftHex(h,a);}
+function darken(h,a){return shiftHex(h,-a);}
+
+// ─── 3D DRAWING PRIMITIVES ────────────────────────────────────────────────────
+function drawSphere(x, y, r, col) {
+  const grd = ctx.createRadialGradient(x - r*0.35, y - r*0.35, r*0.08, x, y, r);
+  grd.addColorStop(0, lighten(col, 70));
+  grd.addColorStop(0.45, col);
+  grd.addColorStop(1, darken(col, 50));
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+}
+
+function drawCylinder(x1, y1, x2, y2, r, col) {
+  const dx = x2-x1, dy = y2-y1;
+  const len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 0.5) return;
+  const nx = -dy/len, ny = dx/len;
+  ctx.beginPath();
+  ctx.moveTo(x1+nx*r, y1+ny*r);
+  ctx.lineTo(x2+nx*r, y2+ny*r);
+  ctx.lineTo(x2-nx*r, y2-ny*r);
+  ctx.lineTo(x1-nx*r, y1-ny*r);
+  ctx.closePath();
+  const grd = ctx.createLinearGradient(x1+nx*r, y1, x1-nx*r, y1);
+  grd.addColorStop(0, lighten(col, 35));
+  grd.addColorStop(0.5, col);
+  grd.addColorStop(1, darken(col, 30));
+  ctx.fillStyle = grd;
+  ctx.fill();
+}
+
+// ─── CHARACTER RENDERER ───────────────────────────────────────────────────────
+const CHAR_CONFIGS = {
+  player:  { skin:'#f5c8a0', hair:'#2a1a00', shirt:'#1e44aa', pants:'#223366', shoes:'#331100', weapon:'katana',  hat:null      },
+  pirate:  { skin:'#d4a060', hair:'#1a0a00', shirt:'#881818', pants:'#3d2000', shoes:'#221100', weapon:'sword',   hat:'pirate'  },
+  marine:  { skin:'#f0d0b0', hair:'#332200', shirt:'#1a3a88', pants:'#102060', shoes:'#000e2a', weapon:'rifle',   hat:'marine'  },
+  beast:   { skin:'#3a7a3a', hair:'#1a3a1a', shirt:'#2a5a2a', pants:'#1a3a1a', shoes:'#0a200a', weapon:null,      hat:null      },
+  boss:    { skin:'#c07030', hair:'#111111', shirt:'#551111', pants:'#221100', shoes:'#110800', weapon:'greatsword',hat:'crown'  },
+};
+
+function drawCharacter(ch) {
+  const sc = ch.scale || 1;
+  const t = ch.animTimer || 0;
+  const moving = ch.anim === 'walk';
+  const attacking = ch.anim === 'attack';
+
+  // Walk cycle
+  const legSwing  = moving   ? Math.sin(t * 0.18) * 14 : 0;
+  const armSwing  = moving   ? Math.sin(t * 0.18) * 12 : 0;
+  const attackArm = attacking ? Math.sin(t * 0.3) * 35 : 0;
+
+  const cfg = CHAR_CONFIGS[ch.type] || CHAR_CONFIGS.pirate;
+  const facing = ch.facing || 0;
+
+  // Flash / freeze tint
+  const doFlash  = ch.flash  > 0;
+  const doFreeze = ch.frozen > 0;
+
+  ctx.save();
+  ctx.translate(ch.x, ch.y);
+
+  if (ch.invincible > 0 && Math.floor(ch.invincible / 5) % 2 === 1) ctx.globalAlpha = 0.45;
+
+  // Ground shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.ellipse(0, 2, 16*sc, 5*sc, 0, 0, Math.PI*2); ctx.fill();
+
+  // Shoes
+  const lShoe = { x: -5*sc + Math.sin((legSwing+5)*Math.PI/180)*8*sc,  y: 20*sc };
+  const rShoe = { x:  5*sc - Math.sin((legSwing+5)*Math.PI/180)*8*sc,  y: 20*sc };
+  const shoeCol = doFlash ? '#ffffff' : doFreeze ? '#aaeeff' : cfg.shoes;
+  drawSphere(lShoe.x, lShoe.y, 5*sc, shoeCol);
+  drawSphere(rShoe.x, rShoe.y, 5*sc, shoeCol);
+
+  // Legs
+  const pantsCol = doFlash ? '#ffffff' : doFreeze ? '#aaeeff' : cfg.pants;
+  drawCylinder(-5*sc, 5*sc, lShoe.x, lShoe.y - 3*sc, 5*sc, pantsCol);
+  drawCylinder( 5*sc, 5*sc, rShoe.x, rShoe.y - 3*sc, 5*sc, pantsCol);
+
+  // Torso
+  const shirtCol = doFlash ? '#ffffff' : doFreeze ? '#aaeeff' : cfg.shirt;
+  const torsoGrd = ctx.createLinearGradient(-12*sc, -18*sc, 12*sc, 6*sc);
+  torsoGrd.addColorStop(0, doFlash ? '#ffffff' : doFreeze ? '#ccffff' : lighten(cfg.shirt, 30));
+  torsoGrd.addColorStop(1, doFlash ? '#dddddd' : doFreeze ? '#88ccee' : darken(cfg.shirt, 20));
+  ctx.fillStyle = torsoGrd;
+  ctx.beginPath();
+  ctx.roundRect(-11*sc, -17*sc, 22*sc, 23*sc, 4*sc);
+  ctx.fill();
+  // Shirt collar
+  ctx.fillStyle = lighten(cfg.shirt, 50);
+  ctx.beginPath(); ctx.roundRect(-4*sc, -17*sc, 8*sc, 5*sc, 2*sc); ctx.fill();
+
+  // Arms
+  const skinCol = doFlash ? '#ffffff' : doFreeze ? '#aaeeff' : cfg.skin;
+  const lArmAng = (armSwing  - 15) * Math.PI / 180;
+  const rArmAng = (-armSwing - 15 + attackArm) * Math.PI / 180 + facing * 0.3;
+  const lArmEnd = { x: -11*sc + Math.cos(lArmAng + Math.PI/2)*18*sc, y: -12*sc + Math.sin(lArmAng + Math.PI/2)*18*sc };
+  const rArmEnd = { x:  11*sc + Math.cos(rArmAng - Math.PI/2)*18*sc, y: -12*sc + Math.sin(rArmAng - Math.PI/2)*18*sc };
+  drawCylinder(-11*sc, -12*sc, lArmEnd.x, lArmEnd.y, 5*sc, shirtCol);
+  drawCylinder( 11*sc, -12*sc, rArmEnd.x, rArmEnd.y, 5*sc, shirtCol);
+  // Hands
+  drawSphere(lArmEnd.x, lArmEnd.y, 5*sc, skinCol);
+  drawSphere(rArmEnd.x, rArmEnd.y, 5*sc, skinCol);
+
+  // Weapon
+  if (cfg.weapon) {
+    ctx.save();
+    ctx.translate(rArmEnd.x, rArmEnd.y);
+    ctx.rotate(facing + attackArm * Math.PI / 180 * 0.8);
+    drawWeapon3D(cfg.weapon, sc);
+    ctx.restore();
+  }
+
+  // Head
+  const headY = -30*sc;
+  drawSphere(0, headY, 13*sc, skinCol);
+  // Hair
+  const hairCol = doFlash ? '#ffffff' : doFreeze ? '#aaeeff' : cfg.hair;
+  ctx.fillStyle = hairCol;
+  ctx.beginPath();
+  ctx.arc(0, headY - 4*sc, 13*sc, Math.PI, 0);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(0, headY - 9*sc, 11*sc, 8*sc, 0, Math.PI, 0);
+  ctx.fill();
+  // Eyes (face direction)
+  const eyeFaceX = Math.cos(facing) * 5*sc;
+  const eyePerp  = Math.sin(facing) * 4*sc;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.arc(eyeFaceX - eyePerp + 0,    headY - 2*sc, 2.2*sc, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.arc(eyeFaceX + eyePerp + 0,    headY - 2*sc, 2.2*sc, 0, Math.PI*2); ctx.fill();
+  // Eyebrows (NPC gets angry)
+  if (ch.type !== 'player') {
+    ctx.strokeStyle = '#331100'; ctx.lineWidth = 1.5*sc;
+    ctx.beginPath();
+    ctx.moveTo(eyeFaceX - eyePerp - 3*sc, headY - 6*sc);
+    ctx.lineTo(eyeFaceX - eyePerp + 3*sc, headY - 4*sc);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(eyeFaceX + eyePerp - 3*sc, headY - 4*sc);
+    ctx.lineTo(eyeFaceX + eyePerp + 3*sc, headY - 6*sc);
+    ctx.stroke();
+  }
+
+  // Hat
+  if (cfg.hat) drawHat3D(0, headY, cfg.hat, sc, doFlash, doFreeze);
+
+  ctx.restore();
+
+  // HP bar (world space, above head)
+  if (ch.hp < ch.maxHp) {
+    const bw = 42, bx = ch.x - bw/2, by = ch.y - 55*sc;
+    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(bx, by, bw, 5);
+    const p = ch.hp / ch.maxHp;
+    ctx.fillStyle = p > 0.5 ? '#33ff33' : p > 0.25 ? '#ffaa00' : '#ff2222';
+    ctx.fillRect(bx, by, bw * p, 5);
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 0.5; ctx.strokeRect(bx, by, bw, 5);
+    // Name tag
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(bx - 5, by - 14, bw + 10, 12);
+    ctx.fillStyle = '#ffddaa'; ctx.font = `bold ${9*sc}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(ch.name || '', ch.x, by - 8);
+  }
+}
+
+function drawWeapon3D(type, sc) {
+  if (type === 'katana') {
+    // Handle
+    drawCylinder(-5*sc, 0, 0, 0, 3.5*sc, '#8b4513');
+    // Tsuba (guard)
+    ctx.fillStyle = '#c8a84b';
+    ctx.beginPath(); ctx.ellipse(0, 0, 2*sc, 5*sc, 0, 0, Math.PI*2); ctx.fill();
+    // Blade
+    ctx.fillStyle = '#dde8f0';
+    ctx.beginPath();
+    ctx.moveTo(0, -2*sc); ctx.lineTo(28*sc, -1*sc); ctx.lineTo(28*sc, 0.5*sc); ctx.lineTo(0, 2*sc);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(2*sc, -1.5*sc); ctx.lineTo(26*sc, -0.5*sc); ctx.lineTo(26*sc, 0); ctx.lineTo(2*sc, 0);
+    ctx.fill();
+  } else if (type === 'sword') {
+    drawCylinder(-4*sc, 0, 0, 0, 3*sc, '#8b4513');
+    ctx.fillStyle = '#c8a84b';
+    ctx.fillRect(-2*sc, -5*sc, 4*sc, 10*sc);
+    ctx.fillStyle = '#b8c8d8';
+    ctx.fillRect(0, -2.5*sc, 22*sc, 5*sc);
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(1*sc, -1.5*sc, 18*sc, 1.5*sc);
+  } else if (type === 'greatsword') {
+    drawCylinder(-6*sc, 0, 0, 0, 4*sc, '#5a2a00');
+    ctx.fillStyle = '#ffcc00';
+    ctx.fillRect(-2*sc, -8*sc, 4*sc, 16*sc);
+    ctx.fillStyle = '#c8d8e8';
+    ctx.beginPath();
+    ctx.moveTo(0, -3*sc); ctx.lineTo(36*sc, -2*sc); ctx.lineTo(40*sc, 0); ctx.lineTo(36*sc, 2*sc); ctx.lineTo(0, 3*sc);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.fillRect(1*sc, -2*sc, 33*sc, 2*sc);
+  } else if (type === 'rifle') {
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-4*sc, -3*sc, 28*sc, 6*sc);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(20*sc, -2.5*sc, 10*sc, 5*sc);
+    ctx.fillStyle = '#555';
+    ctx.fillRect(-4*sc, -1*sc, 4*sc, 8*sc); // grip
+    ctx.fillStyle = '#888';
+    ctx.fillRect(8*sc, -5*sc, 10*sc, 3*sc);  // sight
+  }
+}
+
+function drawHat3D(hx, hy, type, sc, flash, freeze) {
+  const c1 = flash ? '#ffffff' : freeze ? '#aaeeff' : null;
+  if (type === 'pirate') {
+    ctx.fillStyle = c1 || '#111111';
+    ctx.beginPath(); ctx.ellipse(hx, hy - 9*sc, 16*sc, 5*sc, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillRect(hx - 10*sc, hy - 22*sc, 20*sc, 14*sc);
+    ctx.fillStyle = c1 || '#cc1111';
+    ctx.fillRect(hx - 10*sc, hy - 17*sc, 20*sc, 3*sc);
+    // Skull
+    ctx.fillStyle = c1 || '#eeeeee';
+    ctx.beginPath(); ctx.arc(hx, hy - 15*sc, 3.5*sc, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#111';
+    ctx.beginPath(); ctx.arc(hx - 1.5*sc, hy - 15.5*sc, 1*sc, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hx + 1.5*sc, hy - 15.5*sc, 1*sc, 0, Math.PI*2); ctx.fill();
+  } else if (type === 'marine') {
+    ctx.fillStyle = c1 || '#1a3a88';
+    ctx.fillRect(hx - 12*sc, hy - 22*sc, 24*sc, 12*sc);
+    ctx.beginPath(); ctx.ellipse(hx, hy - 10*sc, 15*sc, 4*sc, 0, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = c1 || '#0d2a60';
+    ctx.fillRect(hx - 12*sc, hy - 11*sc, 24*sc, 2*sc);
+    ctx.fillStyle = c1 || '#ffdd00';
+    ctx.fillRect(hx - 7*sc, hy - 20*sc, 14*sc, 2.5*sc);
+    ctx.fillStyle = '#fff'; ctx.font = `bold ${6*sc}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('JUSTICE', hx, hy - 18*sc);
+  } else if (type === 'crown') {
+    ctx.fillStyle = c1 || '#ffcc00';
+    ctx.beginPath();
+    ctx.moveTo(hx - 13*sc, hy - 10*sc);
+    ctx.lineTo(hx - 13*sc, hy - 23*sc);
+    ctx.lineTo(hx - 6*sc,  hy - 17*sc);
+    ctx.lineTo(hx,          hy - 25*sc);
+    ctx.lineTo(hx + 6*sc,  hy - 17*sc);
+    ctx.lineTo(hx + 13*sc, hy - 23*sc);
+    ctx.lineTo(hx + 13*sc, hy - 10*sc);
+    ctx.closePath(); ctx.fill();
+    ['#ff2222','#22ff22','#2222ff'].forEach((c,i) => {
+      ctx.fillStyle = c;
+      ctx.beginPath(); ctx.arc(hx - 6*sc + i*6*sc, hy - 21*sc, 2.5*sc, 0, Math.PI*2); ctx.fill();
+    });
+  }
+}
+
+// ─── GAME STATE ───────────────────────────────────────────────────────────────
+const game = { score: 0, wave: 1 };
+const player = {
+  x: 450, y: 320, speed: 3.5,
+  hp: 150, maxHp: 150,
+  xp: 0, level: 1, xpToNext: 100,
+  fruit: null, fruitCooldown: 0,
+  attackCooldown: 0, invincible: 0,
+  facing: 0, anim: 'idle', animTimer: 0,
+  type: 'player', team: 'player', name: 'You',
+  scale: 1.1, flash: 0, frozen: 0,
+};
+const keys = {}, mouse = { x: 0, y: 0 };
+let enemies = [], projectiles = [], fruitPickups = [], particles = [], floatingTexts = [], effects = [];
+let betweenWaves = false, betweenWaveTimer = 0, waveEnemiesLeft = 0, enemySpawnTimer = 0;
+let gameOver = false, cameraShake = 0;
+
+// ─── FRUITS ───────────────────────────────────────────────────────────────────
+const FRUITS = [
+  { name:'Mera Mera', color:'#ff5500', color2:'#ffaa00', desc:'Fire Blast',  ability:'fire'      },
+  { name:'Hie Hie',   color:'#55ccff', color2:'#aaeeff', desc:'Ice Age',     ability:'ice'       },
+  { name:'Goro Goro', color:'#ffee00', color2:'#ff8800', desc:'Lightning',   ability:'lightning' },
+  { name:'Ope Ope',   color:'#cc44ff', color2:'#ff88ff', desc:'Room Slash',  ability:'room'      },
+  { name:'Magu Magu', color:'#ff2200', color2:'#ff7700', desc:'Magma Fist',  ability:'magma'     },
+];
+
+// ─── ENEMY DEFS ───────────────────────────────────────────────────────────────
+const ENEMY_DEFS = [
+  { type:'pirate', name:'Pirate Grunt', baseHp:80,  speed:1.5, reward:25,  damage:12, range:44, attackCD:70,  scale:1.0 },
+  { type:'marine', name:'Marine Soldier',baseHp:110,speed:1.1, reward:40,  damage:18, range:140,attackCD:85,  scale:1.0 },
+  { type:'beast',  name:'Sea Beast',    baseHp:220, speed:1.3, reward:80,  damage:22, range:48, attackCD:60,  scale:1.55},
+  { type:'boss',   name:'Yonko',        baseHp:500, speed:0.9, reward:200, damage:30, range:55, attackCD:90,  scale:1.5 },
+];
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function dist(ax,ay,bx,by){ return Math.sqrt((ax-bx)**2+(ay-by)**2); }
+function spawnPart(x,y,col,vx,vy,life=28,size=4){ particles.push({x,y,col,vx,vy,life,maxLife:life,size}); }
+function floatText(x,y,txt,col='#fff'){ floatingTexts.push({x,y,txt,col,life:65,vy:-0.85}); }
+function explode(x,y,c1,c2,n=10){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, s=1.5+Math.random()*4;
+    spawnPart(x,y,Math.random()<0.5?c1:c2, Math.cos(a)*s,Math.sin(a)*s,20+Math.random()*22,3+Math.random()*5);
+  }
+}
+function addShake(v){ cameraShake = Math.max(cameraShake, v); }
+function slashFx(x,y,angle,col){ effects.push({type:'slash',x,y,angle,col,life:14,max:14}); }
+
+// ─── ABILITIES ────────────────────────────────────────────────────────────────
+function useAbility(){
+  if(!player.fruit || player.fruitCooldown>0) return;
+  const {ability,color,color2,name} = player.fruit;
+  const a = Math.atan2(mouse.y-player.y, mouse.x-player.x);
+
+  if(ability==='fire'){
+    for(let i=-2;i<=2;i++)
+      projectiles.push({x:player.x,y:player.y,vx:Math.cos(a+i*0.18)*10,vy:Math.sin(a+i*0.18)*10,
+        col:color,size:9,dmg:40,life:55,owner:'player',type:'fireball'});
+    explode(player.x,player.y,color,color2,14); addShake(3);
+    player.fruitCooldown=90; floatText(player.x,player.y-52,'FIRE BLAST!',color);
+  }
+  else if(ability==='ice'){
+    enemies.forEach(e=>{ if(dist(e.x,e.y,player.x,player.y)<230){ e.frozen=220; explode(e.x,e.y,color,color2,8); } });
+    effects.push({type:'iceAoe',x:player.x,y:player.y,maxR:230,col:color,life:22,max:22});
+    player.fruitCooldown=130; floatText(player.x,player.y-52,'ICE AGE!',color);
+  }
+  else if(ability==='lightning'){
+    [...enemies].sort((a,b)=>dist(a.x,a.y,player.x,player.y)-dist(b.x,b.y,player.x,player.y)).slice(0,4).forEach(e=>{
+      e.hp-=65; e.stunned=80; e.flash=14;
+      effects.push({type:'lightning',x1:player.x,y1:player.y,x2:e.x,y2:e.y,col:color,life:12,max:12});
+      explode(e.x,e.y,color,color2,10);
+    });
+    addShake(5); player.fruitCooldown=105; floatText(player.x,player.y-52,'THUNDERBOLT!',color);
+  }
+  else if(ability==='room'){
+    effects.push({type:'room',x:player.x,y:player.y,r:260,col:color,life:28,max:28});
+    enemies.forEach(e=>{
+      const d=dist(e.x,e.y,player.x,player.y);
+      if(d<260){ e.hp-=70; e.flash=12; const nx=(e.x-player.x)/d,ny=(e.y-player.y)/d; e.x+=nx*115; e.y+=ny*115; explode(e.x,e.y,color,color2,8); }
+    });
+    addShake(6); player.fruitCooldown=115; floatText(player.x,player.y-52,'ROOM!',color);
+  }
+  else if(ability==='magma'){
+    enemies.forEach(e=>{
+      const dx=e.x-player.x,dy=e.y-player.y,d=Math.sqrt(dx*dx+dy*dy);
+      if(d<190 && (Math.cos(a)*dx/d+Math.sin(a)*dy/d)>0.25){ e.hp-=90; e.flash=16; e.stunned=45; explode(e.x,e.y,color,color2,14); }
+    });
+    effects.push({type:'magmaFist',x:player.x,y:player.y,angle:a,col:color,col2:color2,life:20,max:20});
+    addShake(8); player.fruitCooldown=100; floatText(player.x,player.y-52,'MAGMA FIST!',color);
+  }
+}
+
+function basicAttack(){
+  if(player.attackCooldown>0) return;
+  const a=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+  player.facing=a; player.anim='attack'; player.animTimer=0;
+  const sx=player.x+Math.cos(a)*42, sy=player.y+Math.sin(a)*42;
+  const col=player.fruit?player.fruit.color:'#ccddff';
+  slashFx(sx,sy,a,col);
+  let hit=false;
+  enemies.forEach(e=>{
+    if(dist(sx,sy,e.x,e.y)<48+e.scale*10){
+      const dmg=18+player.level*3; e.hp-=dmg; e.flash=8;
+      floatText(e.x,e.y-22,`-${dmg}`,'#ff8888');
+      explode(sx,sy,col,'#ffffff',5); hit=true;
+    }
+  });
+  if(hit) addShake(2);
+  player.attackCooldown=18;
+}
+
+function gainXP(amount){
+  player.xp+=amount;
+  if(player.xp>=player.xpToNext){
+    player.xp-=player.xpToNext; player.level++;
+    player.xpToNext=Math.floor(player.xpToNext*1.5);
+    player.maxHp+=30; player.hp=Math.min(player.hp+30,player.maxHp);
+    floatText(player.x,player.y-66,`LEVEL ${player.level}!`,'#ffdd00');
+    explode(player.x,player.y,'#ffdd00','#ffffff',24); addShake(5);
+  }
+}
+
+// ─── SPAWNING ─────────────────────────────────────────────────────────────────
+function spawnEnemy(){
+  let pool = game.wave<3?[0]: game.wave<5?[0,1]: game.wave<8?[0,1,2]:[0,1,2,3];
+  const isBoss = waveEnemiesLeft===1 && game.wave%5===0;
+  const def = ENEMY_DEFS[isBoss?3:pool[Math.floor(Math.random()*pool.length)]];
+  const side=Math.floor(Math.random()*4);
+  let x,y;
+  if(side===0){x=Math.random()*canvas.width;y=-65;}
+  else if(side===1){x=canvas.width+65;y=Math.random()*canvas.height;}
+  else if(side===2){x=Math.random()*canvas.width;y=canvas.height+65;}
+  else{x=-65;y=Math.random()*canvas.height;}
+  const hm=1+game.wave*0.15;
+  enemies.push({...def, x,y, hp:def.baseHp*hm, maxHp:def.baseHp*hm,
+    facing:0, anim:'walk', animTimer:0, frozen:0, stunned:0, flash:0, attackTimer:0, team:'enemy'});
+}
+
+function spawnFruit(){
+  if(fruitPickups.length>=2) return;
+  const f=FRUITS[Math.floor(Math.random()*FRUITS.length)];
+  fruitPickups.push({...f, x:100+Math.random()*700, y:100+Math.random()*440, bob:Math.random()*Math.PI*2});
+}
+
+function startWave(){
+  waveEnemiesLeft=6+game.wave*3; betweenWaves=false; enemySpawnTimer=0;
+}
+
+// ─── UPDATE ───────────────────────────────────────────────────────────────────
+function update(){
+  if(gameOver) return;
+  cameraShake*=0.84;
+
+  // Player movement
+  let dx=0,dy=0;
+  if(keys['w']||keys['arrowup'])   dy-=1;
+  if(keys['s']||keys['arrowdown']) dy+=1;
+  if(keys['a']||keys['arrowleft']) dx-=1;
+  if(keys['d']||keys['arrowright'])dx+=1;
+  const moving=dx!==0||dy!==0;
+  if(dx&&dy){dx*=0.707;dy*=0.707;}
+  player.x=Math.max(22,Math.min(canvas.width-22, player.x+dx*player.speed));
+  player.y=Math.max(22,Math.min(canvas.height-22,player.y+dy*player.speed));
+  player.facing=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+  player.animTimer++;
+  if(moving) player.anim='walk';
+  else if(player.anim==='walk') player.anim='idle';
+  if(player.anim==='attack'&&player.animTimer>22) player.anim='idle';
+
+  if(player.attackCooldown>0) player.attackCooldown--;
+  if(player.fruitCooldown>0)  player.fruitCooldown--;
+  if(player.invincible>0)     player.invincible--;
+  if(player.flash>0)          player.flash--;
+
+  // Fruit pickups
+  fruitPickups=fruitPickups.filter(f=>{
+    f.bob+=0.04;
+    if(dist(f.x,f.y,player.x,player.y)<36){
+      player.fruit=f; player.fruitCooldown=0;
+      floatText(player.x,player.y-55,`${f.name} obtained!`,f.color);
+      explode(player.x,player.y,f.color,f.color2,22); addShake(4);
+      return false;
+    }
+    return true;
+  });
+
+  // Projectiles
+  projectiles=projectiles.filter(p=>{
+    p.x+=p.vx; p.y+=p.vy; p.life--;
+    spawnPart(p.x,p.y,p.col,0,0,8,p.size*0.55);
+    if(p.owner==='player'){
+      let hit=false;
+      enemies.forEach(e=>{
+        if(!hit&&dist(p.x,p.y,e.x,e.y)<e.scale*20+p.size){
+          e.hp-=p.dmg; e.flash=8;
+          floatText(e.x,e.y-22,`-${p.dmg}`,'#ff8888');
+          explode(p.x,p.y,p.col,'#ffffff',6); hit=true;
+        }
+      });
+      if(hit) return false;
+    } else {
+      if(dist(p.x,p.y,player.x,player.y)<22&&player.invincible<=0){
+        player.hp-=p.dmg; player.invincible=50; player.flash=12;
+        floatText(player.x,player.y-30,`-${p.dmg}`,'#ff4444');
+        explode(player.x,player.y,'#ff0000','#ff8800',6); addShake(4);
+        if(player.hp<=0){player.hp=0;gameOver=true;}
+        return false;
+      }
+    }
+    if(p.x<-30||p.x>canvas.width+30||p.y<-30||p.y>canvas.height+30) return false;
+    return p.life>0;
+  });
+
+  // Enemies
+  enemies=enemies.filter(e=>{
+    if(e.hp<=0){
+      explode(e.x,e.y,'#ff6600','#ffcc00',18);
+      gainXP(e.reward); floatText(e.x,e.y,`+${e.reward} XP`,'#ffdd00');
+      game.score+=e.reward; waveEnemiesLeft=Math.max(0,waveEnemiesLeft-1);
+      if(Math.random()<0.11) spawnFruit(); addShake(3);
+      return false;
+    }
+    e.animTimer++;
+    if(e.flash>0)    e.flash--;
+    if(e.attackTimer>0) e.attackTimer--;
+    if(e.frozen>0){  e.frozen--; return true; }
+    if(e.stunned>0)  e.stunned--;
+
+    const ddx=player.x-e.x, ddy=player.y-e.y;
+    const d=Math.sqrt(ddx*ddx+ddy*ddy);
+    e.facing=Math.atan2(ddy,ddx);
+    if(e.stunned<=0&&d>e.range*0.75){
+      e.anim='walk';
+      e.x+=(ddx/d)*e.speed; e.y+=(ddy/d)*e.speed;
+    } else { e.anim='idle'; }
+
+    if(d<e.range&&e.attackTimer<=0&&e.stunned<=0){
+      if(e.type==='marine'){
+        const a=Math.atan2(player.y-e.y,player.x-e.x);
+        projectiles.push({x:e.x,y:e.y,vx:Math.cos(a)*7,vy:Math.sin(a)*7,
+          col:'#ffff88',size:5,dmg:e.damage,life:65,owner:'enemy',type:'bullet'});
+      } else {
+        if(player.invincible<=0){
+          player.hp-=e.damage; player.invincible=48; player.flash=12;
+          floatText(player.x,player.y-30,`-${e.damage}`,'#ff4444');
+          explode(player.x,player.y,'#ff0000','#ff8800',6); addShake(5);
+          slashFx(player.x,player.y,e.facing,'#ff4444');
+          if(player.hp<=0){player.hp=0;gameOver=true;}
+        }
+      }
+      e.attackTimer=e.attackCD; e.anim='attack';
+    }
+    return true;
+  });
+
+  // Wave management
+  if(!betweenWaves){
+    if(waveEnemiesLeft>0&&enemies.length<16){
+      enemySpawnTimer++;
+      if(enemySpawnTimer>=Math.max(20,90-game.wave*5)){ spawnEnemy(); enemySpawnTimer=0; }
+    }
+    if(waveEnemiesLeft<=0&&enemies.length===0){
+      betweenWaves=true; betweenWaveTimer=200; game.wave++;
+      if(game.wave%3===0) spawnFruit();
+    }
+  } else { if(--betweenWaveTimer<=0) startWave(); }
+
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vx*=0.92;p.vy*=0.92;p.life--;return p.life>0;});
+  floatingTexts=floatingTexts.filter(t=>{t.y+=t.vy;t.life--;return t.life>0;});
+  effects=effects.filter(e=>{e.life--;return e.life>0;});
+}
+
+// ─── DRAW ─────────────────────────────────────────────────────────────────────
+function drawGround(){
+  // Grass
+  for(let tx=0;tx<canvas.width;tx+=60)
+    for(let ty=0;ty<canvas.height;ty+=60){
+      ctx.fillStyle=((tx/60+ty/60)%2===0)?'#1e9640':'#1a8a3a';
+      ctx.fillRect(tx,ty,60,60);
+    }
+  // Stone plaza center
+  ctx.fillStyle='#807060';
+  ctx.beginPath(); ctx.ellipse(canvas.width/2,canvas.height/2,210,160,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#706050';
+  ctx.beginPath(); ctx.ellipse(canvas.width/2,canvas.height/2,200,150,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=1;
+  for(let tx=250;tx<660;tx+=44){ ctx.beginPath();ctx.moveTo(tx,170);ctx.lineTo(tx,470);ctx.stroke(); }
+  for(let ty=175;ty<465;ty+=44){ ctx.beginPath();ctx.moveTo(245,ty);ctx.lineTo(655,ty);ctx.stroke(); }
+  // Water border
+  ctx.strokeStyle='rgba(0,100,220,0.35)'; ctx.lineWidth=22;
+  ctx.strokeRect(11,11,canvas.width-22,canvas.height-22);
+}
+
+function drawEffects(){
+  effects.forEach(ef=>{
+    const t=ef.life/ef.max;
+    if(ef.type==='slash'){
+      ctx.save();ctx.translate(ef.x,ef.y);ctx.rotate(ef.angle);
+      ctx.globalAlpha=t; ctx.strokeStyle=ef.col; ctx.lineWidth=4.5*t;
+      ctx.shadowColor=ef.col; ctx.shadowBlur=12;
+      [38,28].forEach(r=>{ ctx.beginPath();ctx.arc(0,0,r*(1.1-t*0.1),-0.85,0.85);ctx.stroke(); });
+      ctx.restore();
+    }
+    else if(ef.type==='lightning'){
+      ctx.save(); ctx.globalAlpha=t;
+      ctx.strokeStyle=ef.col; ctx.lineWidth=3*t;
+      ctx.shadowColor=ef.col; ctx.shadowBlur=18;
+      ctx.beginPath(); ctx.moveTo(ef.x1,ef.y1);
+      for(let i=1;i<=7;i++){
+        ctx.lineTo(ef.x1+(ef.x2-ef.x1)*(i/7)+(Math.random()-0.5)*28,
+                   ef.y1+(ef.y2-ef.y1)*(i/7)+(Math.random()-0.5)*28);
+      }
+      ctx.lineTo(ef.x2,ef.y2); ctx.stroke(); ctx.restore();
+    }
+    else if(ef.type==='iceAoe'){
+      const r=ef.maxR*(1-ef.life/ef.max);
+      ctx.save(); ctx.globalAlpha=t*0.5;
+      ctx.strokeStyle=ef.col; ctx.lineWidth=5; ctx.shadowColor=ef.col; ctx.shadowBlur=22;
+      ctx.beginPath();ctx.arc(ef.x,ef.y,r,0,Math.PI*2);ctx.stroke(); ctx.restore();
+    }
+    else if(ef.type==='room'){
+      ctx.save(); ctx.globalAlpha=t*0.32; ctx.fillStyle=ef.col;
+      ctx.beginPath();ctx.arc(ef.x,ef.y,ef.r,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=t*0.85; ctx.strokeStyle=ef.col; ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(ef.x,ef.y,ef.r,0,Math.PI*2);ctx.stroke(); ctx.restore();
+    }
+    else if(ef.type==='magmaFist'){
+      ctx.save(); ctx.globalAlpha=t; ctx.translate(ef.x,ef.y); ctx.rotate(ef.angle);
+      const g=ctx.createRadialGradient(65,0,5,65,0,90);
+      g.addColorStop(0,ef.col); g.addColorStop(1,'transparent');
+      ctx.fillStyle=g; ctx.beginPath();ctx.ellipse(65,0,90,42,0,0,Math.PI*2);ctx.fill(); ctx.restore();
+    }
+  });
+}
+
+function drawFruits(){
+  fruitPickups.forEach(f=>{
+    const by=Math.sin(f.bob)*8, fy=f.y+by;
+    ctx.save();
+    const g=ctx.createRadialGradient(f.x,fy,3,f.x,fy,48);
+    g.addColorStop(0,f.color+'99'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath();ctx.arc(f.x,fy,48,0,Math.PI*2);ctx.fill();
+    // Fruit sphere
+    drawSphere(f.x,fy,18,f.color);
+    // Swirl markings
+    ctx.strokeStyle=f.color2; ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(f.x-5,fy-4,7,0.5,2.6);ctx.stroke();
+    ctx.beginPath();ctx.arc(f.x+5,fy+4,6,3.6,5.6);ctx.stroke();
+    // Stem
+    ctx.fillStyle='#5a3a10'; ctx.fillRect(f.x-1.5,fy-26,3,9);
+    ctx.fillStyle='#2a7a2a';
+    ctx.beginPath();ctx.ellipse(f.x+6,fy-25,7,3.5,0.5,0,Math.PI*2);ctx.fill();
+    // Label
+    ctx.fillStyle='#fff'; ctx.font='bold 12px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(f.name,f.x,fy+36);
+    ctx.restore();
+  });
+}
+
+function draw(){
+  const sx=(Math.random()-0.5)*cameraShake, sy=(Math.random()-0.5)*cameraShake;
+  ctx.save(); ctx.translate(sx,sy);
+  drawGround();
+  drawFruits();
+  drawEffects();
+
+  // Particles
+  particles.forEach(p=>{
+    ctx.globalAlpha=p.life/p.maxLife;
+    ctx.fillStyle=p.col;
+    ctx.beginPath();ctx.arc(p.x,p.y,Math.max(0.3,p.size*(p.life/p.maxLife)),0,Math.PI*2);ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // Characters sorted by Y (depth)
+  [...enemies, player].sort((a,b)=>a.y-b.y).forEach(drawCharacter);
+
+  // Projectiles
+  projectiles.forEach(p=>{
+    ctx.save();
+    const g=ctx.createRadialGradient(p.x,p.y,0.5,p.x,p.y,p.size);
+    g.addColorStop(0,'#ffffff'); g.addColorStop(0.4,p.col); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  });
+
+  // Floating texts
+  ctx.shadowBlur=4; ctx.shadowColor='#000';
+  floatingTexts.forEach(t=>{
+    ctx.globalAlpha=Math.min(1,t.life/30);
+    ctx.fillStyle=t.col; ctx.font='bold 14px Arial';
+    ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+    ctx.fillText(t.txt,t.x,t.y);
+  });
+  ctx.globalAlpha=1; ctx.shadowBlur=0;
+  ctx.restore();
+
+  drawHUD();
+}
+
+function drawHUD(){
+  // HP panel
+  ctx.fillStyle='rgba(0,0,0,0.72)';
+  ctx.beginPath();ctx.roundRect(8,8,228,64,8);ctx.fill();
+  ctx.fillStyle='#111';ctx.fillRect(14,16,214,20);
+  const hpP=Math.max(0,player.hp/player.maxHp);
+  const hg=ctx.createLinearGradient(14,0,228,0);
+  hg.addColorStop(0,hpP>0.5?'#22cc22':hpP>0.25?'#ffaa00':'#dd1111');
+  hg.addColorStop(1,hpP>0.5?'#55ff55':hpP>0.25?'#ffdd44':'#ff5555');
+  ctx.fillStyle=hg; ctx.fillRect(14,16,214*hpP,20);
+  ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.strokeRect(14,16,214,20);
+  ctx.fillStyle='#fff';ctx.font='bold 11px Arial';ctx.textAlign='left';ctx.textBaseline='middle';
+  ctx.fillText(`HP  ${Math.ceil(player.hp)} / ${player.maxHp}`,18,26);
+  // XP
+  ctx.fillStyle='#111';ctx.fillRect(14,40,214,11);
+  ctx.fillStyle='#5544ee';ctx.fillRect(14,40,214*(player.xp/player.xpToNext),11);
+  ctx.strokeStyle='#444';ctx.strokeRect(14,40,214,11);
+  ctx.fillStyle='#bbaaff';ctx.font='9px Arial';
+  ctx.fillText(`LVL ${player.level}   ${player.xp} / ${player.xpToNext} XP`,16,45);
+
+  // Score/wave
+  ctx.fillStyle='rgba(0,0,0,0.72)';
+  ctx.beginPath();ctx.roundRect(canvas.width-196,8,188,64,8);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font='bold 15px Arial';ctx.textAlign='right';ctx.textBaseline='alphabetic';
+  ctx.fillText(`Score: ${game.score}`,canvas.width-14,30);
+  ctx.fillStyle='#ffdd88';ctx.font='13px Arial';
+  ctx.fillText(`Wave ${game.wave}  |  Left: ${waveEnemiesLeft+enemies.length}`,canvas.width-14,52);
+
+  // Fruit panel
+  if(player.fruit){
+    const f=player.fruit;
+    ctx.fillStyle='rgba(0,0,0,0.72)';
+    ctx.beginPath();ctx.roundRect(canvas.width/2-95,8,190,60,8);ctx.fill();
+    ctx.strokeStyle=f.color;ctx.lineWidth=2;
+    ctx.strokeRect(canvas.width/2-95,8,190,60);
+    drawSphere(canvas.width/2-68,36,16,f.color);
+    ctx.fillStyle=f.color;ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(f.name,canvas.width/2+12,24);
+    ctx.fillStyle='#cccccc';ctx.font='11px Arial';
+    ctx.fillText(`[Q] ${f.desc}${player.fruitCooldown>0?' (CD)':''}`,canvas.width/2+12,42);
+    ctx.fillStyle='#222';ctx.fillRect(canvas.width/2-60,54,120,5);
+    ctx.fillStyle=player.fruitCooldown>0?'#444':f.color;
+    ctx.fillRect(canvas.width/2-60,54,120*Math.max(0,1-player.fruitCooldown/130),5);
+  }
+
+  // Between waves
+  if(betweenWaves){
+    ctx.fillStyle='rgba(0,0,0,0.68)';
+    ctx.beginPath();ctx.roundRect(canvas.width/2-158,canvas.height/2-42,316,84,12);ctx.fill();
+    ctx.strokeStyle='#ffdd00';ctx.lineWidth=2;
+    ctx.strokeRect(canvas.width/2-158,canvas.height/2-42,316,84);
+    ctx.fillStyle='#ffdd00';ctx.font='bold 28px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(`WAVE ${game.wave} INCOMING!`,canvas.width/2,canvas.height/2-10);
+    ctx.fillStyle='#aaaaaa';ctx.font='14px Arial';
+    ctx.fillText('Prepare yourself...',canvas.width/2,canvas.height/2+20);
+  }
+
+  ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font='11px Arial';
+  ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillText('WASD: Move   Click / Space: Attack   Q: Fruit Power',12,canvas.height-9);
+
+  if(gameOver){
+    ctx.fillStyle='rgba(0,0,0,0.87)';ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle='#ff2222';ctx.font='bold 66px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('GAME OVER',canvas.width/2,canvas.height/2-45);
+    ctx.fillStyle='#ffffff';ctx.font='22px Arial';
+    ctx.fillText(`Score: ${game.score}   Wave: ${game.wave}   Level: ${player.level}`,canvas.width/2,canvas.height/2+12);
+    ctx.fillStyle='#ffdd00';ctx.font='18px Arial';
+    ctx.fillText('Press R to play again',canvas.width/2,canvas.height/2+58);
+  }
+}
+
+// ─── INPUT ────────────────────────────────────────────────────────────────────
+window.addEventListener('keydown',e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(e.key==='q'||e.key==='Q') useAbility();
+  if(e.key===' '){e.preventDefault();basicAttack();}
+  if((e.key==='r'||e.key==='R')&&gameOver) location.reload();
+});
+window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect(); mouse.x=e.clientX-r.left; mouse.y=e.clientY-r.top;
+});
+canvas.addEventListener('mousedown',e=>{ if(e.button===0) basicAttack(); });
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+startWave(); spawnFruit();
+function loop(){ update(); draw(); requestAnimationFrame(loop); }
+loop();
+</script>
+</body>
+</html>
