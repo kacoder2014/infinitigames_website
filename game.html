@@ -1311,10 +1311,11 @@ window._pvpDraw = function () {
 };
 
 // Patch the game loop to use PvP variants
-const _originalLoop = loop;
 function loop() {
-  if (gameMode === 'pvp') { window._pvpUpdate(); window._pvpDraw(); }
-  else { update(); draw(); }
+  if (game !== undefined) {
+    if (gameMode === 'pvp') { window._pvpUpdate(); window._pvpDraw(); }
+    else { update(); draw(); }
+  }
   requestAnimationFrame(loop);
 }
 
