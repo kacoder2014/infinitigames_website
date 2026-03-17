@@ -351,6 +351,21 @@ const server = http.createServer(async (req, res) => {
   });
 });
 
+// ── Fight rooms (PvP matchmaking) ─────────────────────────────
+const fightQueue = [];                   // waiting: { ws, username }
+const fightPairs = new Map();            // username.toLowerCase() → opponentUsername.toLowerCase()
+
+function leaveFightQueue(ws) {
+  const idx = fightQueue.findIndex(e => e.ws === ws);
+  if (idx !== -1) fightQueue.splice(idx, 1);
+}
+function leaveFightRoom(username) {
+  const uLow = username.toLowerCase();
+  const opp = fightPairs.get(uLow);
+  if (opp) { fightPairs.delete(uLow); fightPairs.delete(opp); return opp; }
+  return null;
+}
+
 // ── WebSocket ─────────────────────────────────────────────────
 const wss = new WebSocketServer({ server });
 
@@ -399,6 +414,44 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
+    // ── PvP Fight matchmaking ──
+    if (msg.type === 'fight_join') {
+      if (!client.username) { ws.send(JSON.stringify({ type: 'fight_error', error: 'Login required' })); return; }
+      leaveFightQueue(ws);
+      if (fightPairs.has(client.username.toLowerCase())) return; // already in a room
+      // Find a valid waiting player
+      while (fightQueue.length > 0) {
+        const waiting = fightQueue[0];
+        if (waiting.ws.readyState !== waiting.ws.OPEN || waiting.username === client.username) {
+          fightQueue.shift(); continue;
+        }
+        fightQueue.shift();
+        fightPairs.set(client.username.toLowerCase(), waiting.username.toLowerCase());
+        fightPairs.set(waiting.username.toLowerCase(), client.username.toLowerCase());
+        waiting.ws.send(JSON.stringify({ type: 'fight_matched', role: 'p1', opponent: client.username }));
+        ws.send(JSON.stringify({ type: 'fight_matched', role: 'p2', opponent: waiting.username }));
+        return;
+      }
+      fightQueue.push({ ws, username: client.username });
+      ws.send(JSON.stringify({ type: 'fight_waiting' }));
+      return;
+    }
+
+    if (msg.type === 'fight_leave') {
+      if (!client.username) return;
+      leaveFightQueue(ws);
+      const opp = leaveFightRoom(client.username);
+      if (opp) sendTo(opp, { type: 'fight_opponent_left' });
+      return;
+    }
+
+    // Route all other fight_ messages to opponent
+    if (msg.type && msg.type.startsWith('fight_') && client.username) {
+      const opp = fightPairs.get(client.username.toLowerCase());
+      if (opp) sendTo(opp, { ...msg, from: client.username });
+      return;
+    }
+
     if (msg.type === 'message') {
       if (!client?.username) return;
       const text = String(msg.text || '').trim().slice(0, 500);
@@ -416,9 +469,11 @@ wss.on('connection', (ws, req) => {
     clients.delete(ws);
     if (client?.username) {
       broadcast({ type: 'system', text: `${client.username} left the chat`, online: onlineCount() });
+      leaveFightQueue(ws);
+      const fightOpp = leaveFightRoom(client.username);
+      if (fightOpp) sendTo(fightOpp, { type: 'fight_opponent_left' });
       if (!isOnline(client.username)) {
         notifyFriendsPresence(client.username, false, null);
-        // Notify any active CoC opponent that this player disconnected
         broadcast({ type: 'coc_opponent_left', from: client.username });
       }
     }
